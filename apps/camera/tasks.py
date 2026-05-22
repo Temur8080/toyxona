@@ -183,6 +183,7 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                         camera_mac=mac, camera_ip=ip,
                         username=dev.get("username") or "",
                         password=dev.get("password") or "",
+                        is_active=True,
                         is_online=device_field(dev, "is_online", False),
                     )
                     camera_set.append(cam)
@@ -191,6 +192,7 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                     continue
 
                 cam.device_sn, cam.camera_mac, cam.camera_ip = sn, mac, ip
+                cam.is_active = True
                 cam.is_online = device_field(dev, "is_online", False)
                 if device_field(dev, "username"):
                     cam.username = device_field(dev, "username")

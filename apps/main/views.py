@@ -35,6 +35,8 @@ class MainDashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         hall_ids = list(self.request.user.allowed_hall.values_list('id', flat=True))
+        if hall_ids:
+            Hall.check_online(update=True, check_files_count=False, hall_ids=hall_ids)
 
         latest_subq = PeopleCount.objects.filter(
             hall_id=OuterRef('pk'),

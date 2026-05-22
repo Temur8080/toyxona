@@ -115,7 +115,7 @@ def run_sync_cameras(hall_id, force_update=False):
 
 
 @app.task(ignore_result=True, max_retries=None)
-def sync_cameras(hall_id, force_update=False, clear_redis_key=False):
+def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapshots=False):
     def remove_key():
         if clear_redis_key:
             redis_delete(HALL_SNAPSHOT_UPDATE_KEY.format(hall_id))
@@ -132,7 +132,7 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False):
             host = f"http://{hall.server_ip}:1984"
             try:
                 data = DeviceInfo(requests.get(
-                    f"{host}/api/devices", timeout=5,
+                    f"{host}/api/devices", timeout=settings.EDGE_DEVICES_TIMEOUT,
                     headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
                 ).json()["devices"], many=True).data
             except Exception as e:
@@ -194,9 +194,12 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False):
             for cam_id in update_cameras.values():
                 run_update_camera_info(cam_id)
 
-            for cam in camera_set:
-                save_screenshot(cam, f"{host}/api/snapshot/{cam.device_sn}", force_update)
-                cam.save()
+            if skip_snapshots:
+                print("\tsnapshots skipped")
+            else:
+                for cam in camera_set:
+                    save_screenshot(cam, f"{host}/api/snapshot/{cam.device_sn}", force_update)
+                    cam.save()
 
 
 def save_screenshot(cam, snapshot_url, force_update):

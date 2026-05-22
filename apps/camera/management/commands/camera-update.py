@@ -11,6 +11,7 @@ from toyxona.security import switch_to_www_data
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--force', action='store_true', help='Force update snapshots')
+        parser.add_argument('--no-snapshots', action='store_true', help='Skip slow snapshot download')
         parser.add_argument('--id', type=int, default=0, help='Hall id')
 
     def handle(self, *args, **options):

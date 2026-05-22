@@ -54,8 +54,11 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if request.GET.get('load') == 'true' and request.user.has_perm('camera.change_camera'):
             from apps.camera.tasks import sync_cameras
-            sync_cameras(self.hall.id, force_update=True)
-            messages.success(request, _("Kameralar edge serverdan yuklandi"))
+            try:
+                sync_cameras(self.hall.id, force_update=False, skip_snapshots=True)
+                messages.success(request, _("Kameralar edge serverdan yuklandi"))
+            except Exception as exc:
+                messages.error(request, _("Kameralarni yuklashda xato: {0}").format(exc))
             return redirect('camera:list', self.hall.id)
 
         return super().get(request, *args, **kwargs)

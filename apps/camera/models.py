@@ -31,7 +31,6 @@ class Camera(models.Model):
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
     is_online = models.BooleanField(default=False, verbose_name=_("Online"), editable=False)
     use_ai = models.BooleanField(default=False, verbose_name=_("AI bilan sanash"))
-    show_in_centre = models.BooleanField(default=False, verbose_name=_("Markazda ko'rsatish"))
 
     @cached_property
     def total_info(self):

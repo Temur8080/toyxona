@@ -27,7 +27,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_jinja',
-    'debug_toolbar',
     'django_bootstrap5',
     'rest_framework',
     'django_otp',
@@ -37,6 +36,8 @@ INSTALLED_APPS = [
     'apps.camera',
     'apps.counting',
 ]
+if DEBUG:
+    INSTALLED_APPS.insert(7, 'debug_toolbar')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -50,8 +51,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
+if DEBUG:
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'toyxona.urls'
 
@@ -78,7 +80,6 @@ TEMPLATES = [
             'undefined': jinja2.Undefined,
             'bytecode_cache': {'enabled': not DEBUG},
             'extensions': DEFAULT_EXTENSIONS + [
-                "jinja2_humanize_extension.HumanizeExtension",
                 "django_bootstrap5.jinja2.BootstrapTags",
                 "toyxona.jinja2_extension.ToyxonaUtils",
             ],

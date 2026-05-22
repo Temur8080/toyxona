@@ -12,36 +12,31 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views import View
-from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic import DetailView, ListView
 
 from apps.camera.models import Camera
 from apps.camera.serializers import CameraRoiSerializer
 from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras
-from apps.main.hall_status import refresh_allowed_halls
+from apps.main.hall_choice import HallChoiceView
 from apps.main.models import Hall
 from toyxona.helpers import to_int
 from toyxona.redis import redis_delete, redis_exists, redis_ttl
 from toyxona.security import camera_signer
 
 
-class CameraHallChoiceView(LoginRequiredMixin, TemplateView):
-    template_name = 'main/hall-choice.j2'
+def _camera_hall_extra():
+    return {
+        hid: _("{0}/{1} ta kamera").format(m, n)
+        for hid, n, m in Camera.objects.filter(is_active=True).values("hall_id").annotate(
+            n=Count("id"), m=Count("id", filter=Q(is_online=True)),
+        ).values_list("hall_id", "n", "m")
+    }
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["route"] = "camera:list"
-        context["PAGE_TITLE"] = _("Toyxonalar")
-        context["PAGE_SUBTITLE"] = _("Kamera ro'yxati uchun toyxonani tanlang")
-        context["title"] = context["PAGE_TITLE"]
-        context["show_online"] = True
-        context["ALLOWED_HALL"] = refresh_allowed_halls(self.request)
-        context["extra"] = {
-            hid: _("{0}/{1} ta kamera").format(m, n)
-            for hid, n, m in Camera.objects.filter(is_active=True).values("hall_id").annotate(
-                n=Count("id"), m=Count("id", filter=Q(is_online=True)),
-            ).values_list("hall_id", "n", "m")
-        }
-        return context
+
+class CameraHallChoiceView(HallChoiceView):
+    route_name = "camera:list"
+    page_subtitle = _("Kamera ro'yxati uchun toyxonani tanlang")
+    extra_builder = _camera_hall_extra
 
 
 class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -56,10 +51,9 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if request.GET.get('load') == 'true' and request.user.has_perm('camera.change_camera'):
             from apps.camera.tasks import sync_cameras
-            try:
-                from apps.camera.edge import parse_edge_devices
-                import os
+            from apps.camera.edge import parse_edge_devices
 
+            try:
                 before = Camera.objects.filter(hall_id=self.hall.id, is_active=True).count()
                 sync_cameras(self.hall.id, force_update=False, skip_snapshots=True)
                 edge_n = len(parse_edge_devices(
@@ -141,7 +135,6 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if not redis_exists(key):
             return False
         ttl = redis_ttl(key)
-        # Celery ishlamasa qulf 5 daqiqadan keyin o'zi tugaydi; -1 = eski qulf
         if ttl in (-1, -2):
             redis_delete(key)
             return False
@@ -195,89 +188,88 @@ class CameraAiPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
 
     def _edge_get(self, camera, path, timeout=10):
         if not camera.hall.server_ip:
-            raise ValueError("server_ip missing")
+            return None
         url = f"http://{camera.hall.server_ip}:1984{path}"
         return requests.get(url, headers=self._edge_headers(), timeout=timeout)
 
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True)
+
     def render_to_response(self, context, **response_kwargs):
         camera = self.object
-        image_mode = self.request.GET.get("image", "false").lower() == "true"
-        data_mode = self.request.GET.get("data", "false").lower() == "true"
-
-        if image_mode:
+        if self.request.GET.get("image", "").lower() == "true":
             for path in (
                 f"/api/ai/snapshot/{camera.device_sn}",
                 f"/api/snapshot/{camera.device_sn}",
             ):
                 try:
-                    response = self._edge_get(camera, path)
-                    response.raise_for_status()
-                    return HttpResponse(
-                        response.content,
-                        content_type=response.headers.get("Content-Type", "image/jpeg"),
-                    )
+                    resp = self._edge_get(camera, path, timeout=settings.EDGE_API_TIMEOUT)
+                    if resp and resp.status_code == 200 and len(resp.content) > 500:
+                        return HttpResponse(
+                            resp.content,
+                            content_type=resp.headers.get("Content-Type", "image/jpeg"),
+                        )
                 except Exception:
                     continue
             return HttpResponse(status=404)
 
-        if data_mode:
+        if self.request.GET.get("data", "").lower() == "true":
             for path in (
                 f"/api/ai/poses/{camera.device_sn}",
                 f"/api/ai/skeleton/{camera.device_sn}",
                 f"/api/ai/keypoints/{camera.device_sn}",
             ):
                 try:
-                    response = self._edge_get(camera, path)
-                    if response.status_code == 200:
+                    resp = self._edge_get(camera, path, timeout=settings.EDGE_API_TIMEOUT)
+                    if resp and resp.status_code == 200:
                         return HttpResponse(
-                            response.content,
-                            content_type=response.headers.get("Content-Type", "application/json"),
+                            resp.content,
+                            content_type=resp.headers.get("Content-Type", "application/json"),
                         )
                 except Exception:
                     continue
-            return HttpResponse(json.dumps({"persons": []}), content_type="application/json")
+            return HttpResponse(
+                json.dumps({"persons": []}),
+                content_type="application/json",
+            )
 
         return super().render_to_response(context, **response_kwargs)
-
-    def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["PAGE_TITLE"] = str(self.object.hall)
         context["PAGE_SUBTITLE"] = f"{self.object.name} · {_('AI skeleton')}"
         context["preview_url"] = self.request.path
-        context["live_preview_url"] = reverse('camera:preview', args=[self.object.pk])
+        context["live_preview_url"] = reverse("camera:preview", args=[self.object.pk])
         return context
 
 
 class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    TITLE = _("ROI (sanash zonasi)")
     model = Camera
-    permission_required = "camera.change_camera"
     template_name = 'camera/roi.j2'
+    permission_required = "camera.change_camera"
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True)
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         try:
-            payload = json.loads(request.body)
-        except json.JSONDecodeError as e:
-            return HttpResponse(json.dumps({"success": False, "message": str(e)}), content_type="application/json")
-
-        ser = CameraRoiSerializer(data=payload, many=True)
-        if not ser.is_valid():
-            return HttpResponse(json.dumps({
-                "success": False, "message": "Invalid data", "errors": ser.errors,
-            }), content_type="application/json")
-
-        self.object.roi = ser.validated_data
-        self.object.save()
-        return HttpResponse(json.dumps({"success": True, "message": str(_("Saqlandi"))}), content_type="application/json")
+            data = json.loads(request.body)
+            serializer = CameraRoiSerializer(data=data, many=True)
+            serializer.is_valid(raise_exception=True)
+            self.object.roi = serializer.validated_data
+            self.object.save(update_fields=["roi"])
+            from apps.camera.tasks import run_update_camera_info
+            run_update_camera_info(self.object.id)
+            return HttpResponse(json.dumps({"ok": True}))
+        except Exception as exc:
+            return HttpResponse(json.dumps({"error": str(exc)}), status=400)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["PAGE_TITLE"] = str(self.object.hall)
-        context["PAGE_SUBTITLE"] = f"{self.object.name} · ROI"
+        context["PAGE_SUBTITLE"] = self.object.name
+        context["roi_json"] = json.dumps(self.object.roi or [])
         return context
-
-    def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)

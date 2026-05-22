@@ -120,8 +120,8 @@ function initAiPreview(root, options = {}) {
         const ts = Date.now();
         try {
             const [imageResp, dataResp] = await Promise.all([
-                fetch(`${options.imageUrl}?image=true&${ts}`),
-                fetch(`${options.dataUrl}?data=true&${ts}`).catch(() => null),
+                fetch(`${options.imageUrl}?image=true&_=${ts}`),
+                fetch(`${options.dataUrl}?data=true&_=${ts}`).catch(() => null),
             ]);
 
             if (!imageResp.ok) throw new Error("image");
@@ -138,7 +138,7 @@ function initAiPreview(root, options = {}) {
                 if (persons.length) {
                     drawSkeleton(ctx, persons, canvas.width, canvas.height);
                     if (statusEl) {
-                        statusEl.textContent = `${persons.length}`;
+                        statusEl.textContent = String(persons.length);
                     }
                 } else if (statusEl) {
                     statusEl.textContent = "AI";

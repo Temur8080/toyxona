@@ -1,35 +1,28 @@
-import os
-
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
 from apps.camera.models import Camera
 from apps.counting.models import PeopleCount
-from apps.main.hall_status import refresh_allowed_halls
+from apps.main.hall_choice import HallChoiceView
 from apps.main.models import Hall
 
 
-class CountingHallChoiceView(LoginRequiredMixin, TemplateView):
-    template_name = 'main/hall-choice.j2'
+def _counting_hall_extra():
+    return {
+        hid: _("{0} ta kamera").format(n)
+        for hid, n in Camera.objects.filter(is_active=True).values("hall_id").annotate(
+            n=Count("id"),
+        ).values_list("hall_id", "n")
+    }
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["route"] = "counting:dashboard"
-        context["PAGE_TITLE"] = _("Toyxonalar")
-        context["PAGE_SUBTITLE"] = _("Odamlar soni monitoringi uchun toyxonani tanlang")
-        context["title"] = context["PAGE_TITLE"]
-        context["show_online"] = True
-        context["ALLOWED_HALL"] = refresh_allowed_halls(self.request)
-        context["extra"] = {
-            hid: _("{0} ta kamera").format(n)
-            for hid, n in Camera.objects.filter(is_active=True).values("hall_id").annotate(
-                n=Count("id"),
-            ).values_list("hall_id", "n")
-        }
-        return context
+
+class CountingHallChoiceView(HallChoiceView):
+    route_name = "counting:dashboard"
+    page_subtitle = _("Odamlar soni monitoringi uchun toyxonani tanlang")
+    extra_builder = _counting_hall_extra
 
 
 class CountingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):

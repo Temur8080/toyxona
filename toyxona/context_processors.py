@@ -14,6 +14,5 @@ def toyxona(request):
     )
     return {
         "ALLOWED_HALL": allowed_hall,
-        "ALLOWED_HALL_ID": {row.id for row in allowed_hall},
         "TITLE": current_title,
     }

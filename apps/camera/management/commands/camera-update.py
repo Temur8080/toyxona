@@ -29,4 +29,8 @@ class Command(BaseCommand):
                     continue
                 print("-" * 30)
                 print(hall, "checking ...")
-                sync_cameras(hall.id, force_update=force)
+                sync_cameras(
+                    hall.id,
+                    force_update=force,
+                    skip_snapshots=options.get('no_snapshots'),
+                )

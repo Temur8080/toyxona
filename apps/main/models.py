@@ -125,14 +125,19 @@ class Hall(models.Model):
                 for hall in halls
             ]
             for future in as_completed(futures):
-                hall_id, is_online, files_count, cameras_count, states_count, app_version = future.result()
+                try:
+                    hall_id, is_online, files_count, cameras_count, states_count, app_version = future.result()
+                except Exception:
+                    continue
                 result_by_id[hall_id] = (is_online, files_count, cameras_count, states_count, app_version)
 
         result = []
         for hall in halls:
-            hall.is_online, hall.files_count, hall.cameras_count, hall.states_count, hall.app_version = result_by_id[hall.id]
-            if update:
-                hall.save(update_fields=["is_online"])
+            row = result_by_id.get(hall.id)
+            if row:
+                hall.is_online, hall.files_count, hall.cameras_count, hall.states_count, hall.app_version = row
+                if update:
+                    hall.save(update_fields=["is_online", "app_version"])
             result.append(hall)
 
         return result

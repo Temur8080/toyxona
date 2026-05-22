@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import jinja2
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse_lazy
 from django_jinja.builtins import DEFAULT_EXTENSIONS
 from dotenv import load_dotenv
@@ -12,6 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY is not set. Add it to .env")
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 ALLOWED_HOSTS = [
     host.strip()

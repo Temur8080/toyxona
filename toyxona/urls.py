@@ -1,4 +1,3 @@
-from debug_toolbar.toolbar import debug_toolbar_urls
 from django.conf import settings
 from django.conf.urls.i18n import i18n_patterns
 from django.conf.urls.static import static
@@ -14,6 +13,8 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
     urlpatterns += debug_toolbar_urls()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
@@ -22,6 +23,7 @@ urlpatterns += i18n_patterns(
     path("counting/", include("apps.counting.urls")),
     path("account/", include("apps.account.urls")),
     path("camera/", include("apps.camera.urls")),
+    prefix_default_language=False,
 )
 
 admin.site.index_title = _('Toyxona')

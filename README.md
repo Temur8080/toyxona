@@ -61,6 +61,26 @@ celery -A toyxona worker -l INFO
 | `/camera/preview/<id>/` | Live video |
 | `/hall/online/` | Server holati (SSH, SBC, SADP, Snapshot) |
 
+## Live kamera (muhim)
+
+Live video **faqat WebSocket + nginx** orqali ishlaydi (`runserver` yetarli emas).
+
+```mermaid
+flowchart LR
+    Browser -->|ws://VPS/camera/stream| Nginx
+    Nginx -->|auth| Django["/camera/verify/"]
+    Nginx -->|proxy| Edge["10.8.0.4:1984 go2rtc"]
+```
+
+1. `.env`: `CAMERA_STREAM_HOST=176.101.56.247` (nginx port 80 bo'lsa port yozilmaydi)
+2. Nginx: `deploy/nginx-toyxona.conf` ni `/etc/nginx/sites-available/toyxona` ga nusxalang
+3. SmartBozor nginx dan tekshirish: `grep -A20 camera/stream /etc/nginx/sites-enabled/*`
+4. Gunicorn: `gunicorn toyxona.wsgi -b 127.0.0.1:8000`
+5. Admin: har kamerada **username/password** (RTSP) to'ldirilgan bo'lsin
+6. `python manage.py camera-update --id 1 --no-snapshots` keyin **Live** tugmasi
+
+Agar stream ishlamasa, SmartBozor serveridagi `proxy_pass` yo'lini `deploy/nginx-toyxona.conf` ga moslashtiring.
+
 ## Edge server API
 
 Edge server (`{server_ip}:1984`):

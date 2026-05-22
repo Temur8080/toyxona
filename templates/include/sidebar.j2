@@ -1,0 +1,38 @@
+<aside class="app-sidebar">
+    <a href="{{ url('main:dashboard') }}" class="app-brand">
+        <span class="app-brand-icon"><i class="bi bi-grid-1x2-fill"></i></span>
+        <span>Toyxona</span>
+    </a>
+
+    <nav class="app-nav">
+        <a href="{{ url('main:dashboard') }}"
+           class="app-nav-link {{ is_active(request, 'main:dashboard') }}">
+            <i class="bi bi-speedometer2"></i>
+            <span>{{ _("Dashboard") }}</span>
+        </a>
+
+        {% if perms.counting.view_peoplecount and ALLOWED_HALL %}
+            <a href="{% if ALLOWED_HALL|length==1 %}{{ url('counting:dashboard', ALLOWED_HALL[0].id) }}{% else %}{{ url('counting:hall-choice') }}{% endif %}"
+               class="app-nav-link {{ is_active(request, 'counting:hall-choice,counting:dashboard') }}">
+                <i class="bi bi-people"></i>
+                <span>{{ _("Odamlar soni") }}</span>
+            </a>
+        {% endif %}
+
+        {% if perms.camera.view_camera and ALLOWED_HALL %}
+            <a href="{% if ALLOWED_HALL|length==1 %}{{ url('camera:list', ALLOWED_HALL[0].id) }}{% else %}{{ url('camera:list-halls') }}{% endif %}"
+               class="app-nav-link {{ is_active(request, 'camera:list-halls,camera:list,camera:preview,camera:preview-ai,camera:roi') }}">
+                <i class="bi bi-camera-video"></i>
+                <span>{{ _("Kameralar") }}</span>
+            </a>
+        {% endif %}
+
+        {% if perms.main.hall_online %}
+            <a href="{{ url('main:hall-online') }}"
+               class="app-nav-link {{ is_active(request, 'main:hall-online') }}">
+                <i class="bi bi-hdd-network"></i>
+                <span>{{ _("Server holati") }}</span>
+            </a>
+        {% endif %}
+    </nav>
+</aside>

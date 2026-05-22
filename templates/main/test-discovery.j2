@@ -1,0 +1,13 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="app-page-card">
+    <div class="mb-3 text-muted">{{ object.server_ip }}:{{ object.server_port }}</div>
+    {% if result %}
+        <div class="alert alert-success">{{ result }}</div>
+    {% else %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <a href="{{ url('main:hall-online') }}" class="btn btn-outline-primary mt-3">{{ _("Orqaga") }}</a>
+</div>
+{% endblock %}

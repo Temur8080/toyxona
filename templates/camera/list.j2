@@ -1,0 +1,101 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap gap-2">
+        {% if perms.camera.change_camera %}
+            <a href="?load=true" class="btn btn-primary">
+                <i class="bi bi-cloud-download me-1"></i>{{ _("Kameralarni yuklash") }}
+            </a>
+            <button type="button" class="btn btn-outline-primary" id="id_update_all">{{ _("Rasmlarni yangilash") }}</button>
+            <a href="?o=true" class="btn btn-outline-primary">{{ _("Onlaynlarni yangilash") }}</a>
+        {% endif %}
+    </div>
+    {% if updating %}
+        <span class="status-pill online"><i class="bi bi-arrow-repeat"></i> {{ _("Yangilanmoqda...") }}</span>
+    {% endif %}
+</div>
+
+<div class="camera-grid">
+    {% for cam in object_list %}
+        <article class="camera-card">
+            <a href="{{ url('camera:preview-ai', cam.id) }}" class="camera-card-media">
+                <img src="{% if cam.screenshot %}{{ cam.screenshot.url }}?{{ request.GET.t }}{% else %}{{ static('img/no-photo.png') }}{% endif %}"
+                     {% if cam.use_ai and cam.is_online %}
+                     data-ai-src="{{ url('camera:preview-ai', cam.id) }}?image=true"
+                     data-ai-live="1"
+                     {% endif %}
+                     alt="{{ cam.name }}"
+                     loading="lazy">
+                {% if cam.use_ai %}
+                    <span class="camera-card-badge"><i class="bi bi-person-arms-up"></i> AI</span>
+                {% endif %}
+            </a>
+            <div class="camera-card-body">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="status-pill {{ 'online' if cam.is_online else 'offline' }}">
+                        {{ _("Online") if cam.is_online else _("Offline") }}
+                    </span>
+                </div>
+                <h3 class="camera-card-title mt-2">{{ cam.name }}</h3>
+                {% if cam.total_info %}<div class="small text-muted">{{ cam.total_info }}</div>{% endif %}
+                {% if perms.camera.change_camera %}
+                    <div class="d-flex gap-2 mt-2">
+                        <a href="{{ url('camera:roi', cam.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-bounding-box"></i> ROI
+                        </a>
+                        <a href="{{ url('camera:preview', cam.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-play-fill"></i> Live
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </article>
+    {% else %}
+        <div class="empty-state w-100">
+            <i class="bi bi-camera-video-off"></i>
+            <p>{{ _("Kamera topilmadi") }}</p>
+            {% if perms.camera.change_camera %}
+                <a href="?load=true" class="btn btn-primary btn-sm mt-2">{{ _("Edge serverdan yuklash") }}</a>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelector("#id_update_all")?.addEventListener("click", function () {
+        if (confirm("{{ _('Yangilansinmi?') }}")) window.location.href = "?u=true";
+    });
+
+    function refreshAiThumbnails() {
+        document.querySelectorAll("img[data-ai-live]").forEach(img => {
+            const base = img.getAttribute("data-ai-src");
+            if (!base) return;
+            fetch(`${base}&${Date.now()}`)
+                .then(r => r.ok ? r.blob() : Promise.reject())
+                .then(blob => {
+                    img.src = URL.createObjectURL(blob);
+                })
+                .catch(() => {});
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        refreshAiThumbnails();
+        setInterval(refreshAiThumbnails, 5000);
+    });
+</script>
+{% if updating %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const check = () => fetch("?check=true").then(r => r.text()).then(r => {
+            if (r.toLowerCase() === "false") window.location.href = '?t=' + Date.now();
+            else setTimeout(check, 2000);
+        });
+        setTimeout(check, 2000);
+    });
+</script>
+{% endif %}
+{% endblock %}

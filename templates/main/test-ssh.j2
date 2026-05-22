@@ -1,0 +1,21 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="app-page-card">
+    <div class="mb-3 text-muted">{{ object.server_ip }}:{{ object.server_port }}</div>
+    <table class="data-table">
+        <tr>
+            <th>{{ _("Success") }}</th>
+            <td>
+                <span class="status-pill {{ 'online' if success else 'offline' }}">
+                    {{ _("Ha") if success else _("Yo'q") }}
+                </span>
+            </td>
+        </tr>
+        <tr><th>{{ _("Result") }}</th><td>{{ result or "—" }}</td></tr>
+        <tr><th>{{ _("Return code") }}</th><td>{{ return_code }}</td></tr>
+        <tr><th>{{ _("Message") }}</th><td>{{ msg }}</td></tr>
+    </table>
+    <a href="{{ url('main:hall-online') }}" class="btn btn-outline-primary mt-3">{{ _("Orqaga") }}</a>
+</div>
+{% endblock %}

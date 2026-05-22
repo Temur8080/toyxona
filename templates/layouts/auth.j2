@@ -1,0 +1,16 @@
+{% extends 'layouts/base.j2' %}
+
+{% block content %}
+<div class="app-shell">
+    {% include 'include/sidebar.j2' %}
+
+    <div class="app-main">
+        {% include 'include/navbar.j2' %}
+
+        <div class="app-content">
+            {{ bootstrap_messages() }}
+            {% block page_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

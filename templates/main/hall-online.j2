@@ -1,0 +1,59 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="app-page-card overflow-auto">
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>{{ _("Toyxona") }}</th>
+            <th>Username</th>
+            <th>IP</th>
+            <th>{{ _("Dastur versiyasi") }}</th>
+            <th>{{ _("Fayllar soni") }}</th>
+            <th>{{ _("Kameralar soni") }}</th>
+            <th>{{ _("AI state soni") }}</th>
+            <th>{{ _("Onlayn") }}</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in result %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td><strong>{{ row }}</strong></td>
+                <td>{{ row.server_user or "—" }}</td>
+                <td>{{ row.server_ip or "—" }}</td>
+                <td class="text-muted">{{ row.app_version }}</td>
+                <td class="text-center">{{ row.files_count }}</td>
+                <td class="text-center">{{ row.cameras_count }}</td>
+                <td class="text-center">{{ row.states_count }}</td>
+                <td class="text-center">
+                    <span class="status-pill {{ 'online' if row.is_online else 'offline' }}">
+                        {{ _("Online") if row.is_online else _("Offline") }}
+                    </span>
+                </td>
+                <td class="text-nowrap">
+                    <div class="d-flex flex-wrap gap-1">
+                        <a href="{{ url('main:hall-test-ssh', row.id) }}" class="btn btn-sm btn-outline-primary">SSH</a>
+                        <a href="{{ url('main:hall-test-sbc', row.id) }}" class="btn btn-sm btn-outline-primary">SBC</a>
+                        <a href="{{ url('main:hall-test-discovery', row.id) }}" class="btn btn-sm btn-outline-primary">SADP</a>
+                        <a href="{{ url('main:hall-test-run-snapshot', row.id) }}" class="btn btn-sm btn-outline-primary">Snapshot</a>
+                        <a href="{{ url('main:hall-data', row.id, '') }}" class="btn btn-sm btn-outline-primary" target="_blank">Data</a>
+                    </div>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="10">
+                    <div class="empty-state py-4">
+                        <i class="bi bi-hdd-network"></i>
+                        <p>{{ _("Toyxona topilmadi") }}</p>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

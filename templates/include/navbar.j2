@@ -1,0 +1,27 @@
+<header class="app-topbar">
+    <div>
+        <h1 class="app-topbar-title">{{ PAGE_TITLE|default(TITLE)|default(_("Toyxona")) }}</h1>
+        {% if PAGE_SUBTITLE %}
+            <p class="app-topbar-subtitle">{{ PAGE_SUBTITLE }}</p>
+        {% endif %}
+    </div>
+
+    <div class="dropdown">
+        <button type="button" class="user-menu-btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+            <li class="px-3 py-2">
+                <div class="fw-semibold">{{ request.user.get_full_name()|default(request.user.username) }}</div>
+                <div class="small text-muted">{{ request.user.username }}</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="post" action="{{ url('account:logout') }}" class="px-2 pb-2">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item rounded">{{ _("Chiqish") }}</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</header>

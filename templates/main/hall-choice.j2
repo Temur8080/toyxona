@@ -1,0 +1,29 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="hall-grid">
+    {% for hall in ALLOWED_HALL %}
+        <a href="{{ url(route, hall.id) }}" class="hall-card">
+            <div class="hall-card-head">
+                <div>
+                    <h3 class="hall-card-title">{{ hall }}</h3>
+                    <div class="hall-card-meta">{{ hall.district.region.name }} · {{ hall.district.name }}</div>
+                </div>
+                {% if show_online is defined %}
+                    <span class="status-pill {{ 'online' if hall.is_online else 'offline' }}">
+                        {{ _("Online") if hall.is_online else _("Offline") }}
+                    </span>
+                {% endif %}
+            </div>
+            {% if extra is defined and extra.get(hall.id) %}
+                <div class="text-muted">{{ extra[hall.id] }}</div>
+            {% endif %}
+        </a>
+    {% else %}
+        <div class="empty-state w-100">
+            <i class="bi bi-building"></i>
+            <p>{{ _("Ruxsat berilgan toyxona yo'q") }}</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-card-icon primary"><i class="bi bi-people-fill"></i></div>
+        <div>
+            <div class="stat-card-value">{{ current_count|intcomma }}</div>
+            <div class="stat-card-label">{{ _("Hozirgi odamlar soni") }}</div>
+            {% if current_time %}
+                <div class="small text-muted mt-1">{{ current_time|datetime_format }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon success"><i class="bi bi-building"></i></div>
+        <div>
+            <div class="stat-card-value">{{ hall }}</div>
+            <div class="stat-card-label">{{ _("Toyxona") }}</div>
+            {% if max_capacity %}
+                <div class="small text-muted mt-1">{{ _("Sig'im") }}: {{ max_capacity|intcomma }}</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon {% if fill_percent and fill_percent > 90 %}danger{% elif fill_percent and fill_percent > 70 %}warning{% else %}primary{% endif %}">
+            <i class="bi bi-percent"></i>
+        </div>
+        <div>
+            <div class="stat-card-value">{% if fill_percent is not none %}{{ fill_percent }}%{% else %}—{% endif %}</div>
+            <div class="stat-card-label">{{ _("To'ldirilganlik") }}</div>
+        </div>
+    </div>
+</div>
+
+{% if fill_percent is not none %}
+    <div class="app-page-card mb-4">
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">{{ _("Sig'im holati") }}</span>
+            <strong>{{ current_count|intcomma }} / {{ max_capacity|intcomma }}</strong>
+        </div>
+        <div class="capacity-bar" style="height:6px">
+            <div class="capacity-bar-fill {% if fill_percent > 90 %}danger{% elif fill_percent > 70 %}warning{% endif %}"
+                 style="width: {{ fill_percent if fill_percent <= 100 else 100 }}%"></div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="app-page-card h-100">
+            <h2 class="section-title">{{ _("Bugungi dinamika") }}</h2>
+            {% if chart_points %}
+                <div class="chart-bars">
+                    {% for point in chart_points %}
+                        <div class="chart-bar" style="height: {{ point.height }}%" title="{{ point.count }} — {{ point.time }}"></div>
+                    {% endfor %}
+                </div>
+                <div class="chart-bar-labels">
+                    {% for point in chart_points %}
+                        <span>{{ point.time }}</span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state py-4">
+                    <i class="bi bi-bar-chart"></i>
+                    <p>{{ _("Bugun ma'lumot yo'q") }}</p>
+                </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{{ url('camera:list', hall.id) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-camera-video me-2"></i>{{ _("Kameralar") }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="app-page-card h-100">
+            <h2 class="section-title">{{ _("Bugungi tarix") }}</h2>
+            {% if history %}
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>{{ _("Vaqt") }}</th>
+                        <th>{{ _("Odamlar") }}</th>
+                        <th>{{ _("Kamera") }}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in history %}
+                        <tr>
+                            <td>{{ row.recorded_at|datetime_format }}</td>
+                            <td><strong>{{ row.count|intcomma }}</strong></td>
+                            <td>{{ row.camera.name if row.camera else "—" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state py-4">
+                    <i class="bi bi-table"></i>
+                    <p>{{ _("Ma'lumot yo'q. sync-people-count buyrug'ini ishga tushiring") }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

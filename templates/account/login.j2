@@ -1,0 +1,53 @@
+{% extends 'layouts/base.j2' %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-page-bg"></div>
+
+    <div class="login-box">
+        <div class="login-box-header">
+            <span class="login-logo"><i class="bi bi-grid-1x2-fill"></i></span>
+            <h1 class="login-title">Toyxona</h1>
+            <p class="login-subtitle">{{ _("Monitoring tizimiga kirish") }}</p>
+        </div>
+
+        <form method="post" autocomplete="off" class="login-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors() %}
+                <div class="login-alert">
+                    {% for error in form.non_field_errors() %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="login-field">
+                <label for="{{ form.username.id_for_label }}" class="login-label">{{ form.username.label }}</label>
+                <div class="login-input-group">
+                    <i class="bi bi-person"></i>
+                    {{ form.username }}
+                </div>
+                {% if form.username.errors %}
+                    <div class="login-error">{{ form.username.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div class="login-field">
+                <label for="{{ form.password.id_for_label }}" class="login-label">{{ form.password.label }}</label>
+                <div class="login-input-group">
+                    <i class="bi bi-lock"></i>
+                    {{ form.password }}
+                </div>
+                {% if form.password.errors %}
+                    <div class="login-error">{{ form.password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary login-submit w-100">
+                {{ _("Kirish") }}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

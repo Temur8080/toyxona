@@ -1,0 +1,38 @@
+{% extends 'layouts/auth.j2' %}
+
+{% block page_content %}
+<div class="app-page-card">
+    <div class="mb-3 text-muted">{{ object.server_ip }}:{{ object.server_port }}</div>
+    <div class="mb-3"><strong>Version:</strong> {{ version }}</div>
+    <div class="mb-3"><strong>{{ _("Fayllar soni") }}:</strong> {{ files_count }}</div>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% else %}
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>SN</th>
+                <th>MAC</th>
+                <th>IP</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in result %}
+                <tr>
+                    <td>{{ row.device_sn }}</td>
+                    <td>{{ row.mac }}</td>
+                    <td>{{ row.ip }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">{{ _("Bitta ham kamera topilmadi. SADP ni tekshirish kerak.") }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <a href="{{ url('main:hall-online') }}" class="btn btn-outline-primary mt-3">{{ _("Orqaga") }}</a>
+</div>
+{% endblock %}

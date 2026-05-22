@@ -88,7 +88,7 @@ class MainHallOnline(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context["PAGE_TITLE"] = _('Server holati')
         context["PAGE_SUBTITLE"] = _('Edge serverlar, kameralar va AI holati')
-        context["result"] = Hall.check_online(False, check_files_count=True)
+        context["result"] = Hall.check_online(True, check_files_count=True)
         return context
 
 

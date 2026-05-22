@@ -111,8 +111,11 @@ class Hall(models.Model):
         return hall_id, is_online, files_count, cameras_count, states_count, app_version
 
     @classmethod
-    def check_online(cls, update=False, *, check_files_count=False):
-        halls = list(Hall.objects.order_by("id").all())
+    def check_online(cls, update=False, *, check_files_count=False, hall_ids=None):
+        qs = Hall.objects.order_by("id")
+        if hall_ids is not None:
+            qs = qs.filter(id__in=hall_ids)
+        halls = list(qs.all())
         max_workers = min(50, len(halls) or 1)
         result_by_id = {}
 

@@ -144,6 +144,7 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                 print("\t0 devices from edge API")
                 return
 
+            Hall.objects.filter(pk=hall.id).update(is_online=True)
             print(f"\t{len(data)} devices from edge API")
             host = f"http://{hall.server_ip}:1984"
 

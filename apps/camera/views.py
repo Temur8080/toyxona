@@ -17,6 +17,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 from apps.camera.models import Camera
 from apps.camera.serializers import CameraRoiSerializer
 from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras
+from apps.main.hall_status import refresh_allowed_halls
 from apps.main.models import Hall
 from toyxona.helpers import to_int
 from toyxona.redis import redis_exists
@@ -33,6 +34,7 @@ class CameraHallChoiceView(LoginRequiredMixin, TemplateView):
         context["PAGE_SUBTITLE"] = _("Kamera ro'yxati uchun toyxonani tanlang")
         context["title"] = context["PAGE_TITLE"]
         context["show_online"] = True
+        context["ALLOWED_HALL"] = refresh_allowed_halls(self.request)
         context["extra"] = {
             hid: _("{0}/{1} ta kamera").format(m, n)
             for hid, n, m in Camera.objects.filter(is_active=True).values("hall_id").annotate(

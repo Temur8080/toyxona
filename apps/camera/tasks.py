@@ -165,7 +165,9 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
 
             new_devices = []
             for dev in data:
-                sn, mac, ip = dev["device_sn"], dev["mac"], dev["ip"]
+                sn = device_field(dev, "device_sn")
+                mac = device_field(dev, "mac", "unknown")
+                ip = device_field(dev, "ip")
                 if sn in camera_by_sn:
                     cam = camera_by_sn[sn]
                     update_cameras.pop(cam.device_sn, None)
@@ -181,7 +183,7 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                         camera_mac=mac, camera_ip=ip,
                         username=dev.get("username") or "",
                         password=dev.get("password") or "",
-                        is_online=dev["is_online"],
+                        is_online=device_field(dev, "is_online", False),
                     )
                     camera_set.append(cam)
                     new_devices.append(cam)
@@ -189,11 +191,11 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                     continue
 
                 cam.device_sn, cam.camera_mac, cam.camera_ip = sn, mac, ip
-                cam.is_online = dev["is_online"]
-                if dev.get("username"):
-                    cam.username = dev["username"]
-                if dev.get("password"):
-                    cam.password = dev["password"]
+                cam.is_online = device_field(dev, "is_online", False)
+                if device_field(dev, "username"):
+                    cam.username = device_field(dev, "username")
+                if device_field(dev, "password"):
+                    cam.password = device_field(dev, "password")
                 cam.save()
                 found_ids.discard(cam.id)
 

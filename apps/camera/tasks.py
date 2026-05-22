@@ -8,8 +8,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.camera.edge import parse_edge_devices
 from apps.camera.models import Camera
-from apps.camera.serializers import DeviceInfo
 from apps.main.models import Hall
 from toyxona.celery import app
 from toyxona.redis import redis_delete, redis_expire, redis_getset, redis_set_nx
@@ -129,16 +129,23 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                 print(f"{hall_id}: {e}")
                 return
 
-            host = f"http://{hall.server_ip}:1984"
             try:
-                data = DeviceInfo(requests.get(
-                    f"{host}/api/devices", timeout=settings.EDGE_DEVICES_TIMEOUT,
-                    headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
-                ).json()["devices"], many=True).data
+                data = parse_edge_devices(
+                    hall.server_ip,
+                    ACCESS_TOKEN,
+                    timeout=settings.EDGE_DEVICES_TIMEOUT,
+                )
             except Exception as e:
                 print("Error:", e)
                 Camera.objects.filter(hall_id=hall.id).update(is_online=False)
                 return
+
+            if not data:
+                print("\t0 devices from edge API")
+                return
+
+            print(f"\t{len(data)} devices from edge API")
+            host = f"http://{hall.server_ip}:1984"
 
             camera_by_sn, camera_by_mac, camera_by_ip, camera_empty = {}, {}, {}, []
             camera_set = list(hall.camera_set.order_by('id').all())
@@ -171,7 +178,9 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                 else:
                     cam = Camera(
                         hall_id=hall.id, device_sn=sn, name=f"Camera {n}",
-                        camera_mac=mac, camera_ip=ip, username="", password="",
+                        camera_mac=mac, camera_ip=ip,
+                        username=dev.get("username") or "",
+                        password=dev.get("password") or "",
                         is_online=dev["is_online"],
                     )
                     camera_set.append(cam)
@@ -181,6 +190,10 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
 
                 cam.device_sn, cam.camera_mac, cam.camera_ip = sn, mac, ip
                 cam.is_online = dev["is_online"]
+                if dev.get("username"):
+                    cam.username = dev["username"]
+                if dev.get("password"):
+                    cam.password = dev["password"]
                 cam.save()
                 found_ids.discard(cam.id)
 
@@ -212,7 +225,11 @@ def save_screenshot(cam, snapshot_url, force_update):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         if not os.path.exists(file_path) or force_update:
-            response = requests.get(snapshot_url, headers={"Authorization": f"Bearer {ACCESS_TOKEN}"}, timeout=10)
+            response = requests.get(
+                snapshot_url,
+                headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
+                timeout=settings.EDGE_API_TIMEOUT,
+            )
             if response.status_code == 200:
                 file_path_tmp = file_path + ".tmp"
                 with open(file_path_tmp, 'wb') as f:

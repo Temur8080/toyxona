@@ -12,8 +12,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 from django_jinja.views.generic import DetailView
 
+from apps.camera.edge import parse_edge_devices
 from apps.camera.models import Camera
-from apps.camera.serializers import DeviceInfo
 from apps.counting.models import PeopleCount
 from apps.main.models import Hall
 
@@ -188,13 +188,7 @@ class MainHallSmartControl(LoginRequiredMixin, PermissionRequiredMixin, DetailVi
             context["files_count"] = str(exc)
 
         try:
-            req = requests.get(
-                f"http://{self.object.server_ip}:1984/api/devices",
-                headers={"Authorization": f"Bearer {ACCESS_TOKEN}"},
-                timeout=15,
-            )
-            req.raise_for_status()
-            context["result"] = DeviceInfo(req.json()["devices"], many=True).data
+            context["result"] = parse_edge_devices(self.object.server_ip, ACCESS_TOKEN, timeout=15)
         except Exception as exc:
             context["error"] = str(exc)
 

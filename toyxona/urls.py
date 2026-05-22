@@ -28,5 +28,5 @@ admin.site.index_title = _('Toyxona')
 admin.site.site_header = _('Toyxona boshqaruv')
 admin.site.site_title = _('Toyxona')
 
-if not settings.DEBUG:
+if not settings.DEBUG and settings.OTP_ADMIN_REQUIRED:
     admin.site.__class__ = OTPAdminSite

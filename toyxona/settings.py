@@ -172,3 +172,4 @@ REST_FRAMEWORK = {
 
 OTP_TOTP_ISSUER = "toyxona.uz"
 OTP_ADMIN_HIDE_SENSITIVE_DATA = os.getenv('OTP_ADMIN_HIDE_SENSITIVE_DATA', '').lower() != 'false'
+OTP_ADMIN_REQUIRED = os.getenv('OTP_ADMIN_REQUIRED', 'true').lower() == 'true'

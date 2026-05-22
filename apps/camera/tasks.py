@@ -165,51 +165,45 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
             print(f"\t{len(data)} devices from edge API")
             host = f"http://{hall.server_ip}:1984"
 
-            camera_by_sn, camera_by_mac, camera_by_ip, camera_empty = {}, {}, {}, []
-            camera_set = list(hall.camera_set.order_by('id').all())
-            n, found_ids = len(camera_set), {row.id for row in camera_set}
-            update_cameras = {}
-
-            for cam in camera_set:
-                if cam.device_sn:
-                    camera_by_sn[cam.device_sn] = cam
-                    update_cameras[cam.device_sn] = cam.id
-                elif cam.camera_mac:
-                    camera_by_mac[cam.camera_mac] = cam
-                elif cam.camera_ip:
-                    camera_by_ip[cam.camera_ip] = cam
-                else:
-                    camera_empty.append(cam)
-
+            camera_by_sn = {
+                cam.device_sn: cam
+                for cam in hall.camera_set.exclude(device_sn__isnull=True).exclude(device_sn="")
+            }
+            edge_sns = set()
             new_devices = []
+            updated = 0
+            n = Camera.objects.filter(hall_id=hall.id).count()
+
             for dev in data:
                 sn = device_field(dev, "device_sn")
+                if not sn:
+                    continue
+                edge_sns.add(sn)
                 mac = device_field(dev, "mac", "unknown")
                 ip = device_field(dev, "ip")
-                if sn in camera_by_sn:
-                    cam = camera_by_sn[sn]
-                    update_cameras.pop(cam.device_sn, None)
-                elif mac in camera_by_mac:
-                    cam = camera_by_mac[mac]
-                elif ip in camera_by_ip:
-                    cam = camera_by_ip[ip]
-                elif camera_empty:
-                    cam = camera_empty.pop(0)
-                else:
+
+                cam = camera_by_sn.get(sn)
+                if cam is None:
                     cam = Camera(
-                        hall_id=hall.id, device_sn=sn, name=f"Camera {n}",
-                        camera_mac=mac, camera_ip=ip,
-                        username=dev.get("username") or "",
-                        password=dev.get("password") or "",
+                        hall_id=hall.id,
+                        device_sn=sn,
+                        name=f"Camera {n + 1}",
+                        camera_mac=mac,
+                        camera_ip=ip,
+                        username=device_field(dev, "username") or "",
+                        password=device_field(dev, "password") or "",
                         is_active=True,
                         is_online=device_field(dev, "is_online", False),
                     )
-                    camera_set.append(cam)
                     new_devices.append(cam)
+                    camera_by_sn[sn] = cam
                     n += 1
                     continue
 
-                cam.device_sn, cam.camera_mac, cam.camera_ip = sn, mac, ip
+                cam.device_sn = sn
+                cam.camera_mac = mac
+                if ip:
+                    cam.camera_ip = ip
                 cam.is_active = True
                 cam.is_online = device_field(dev, "is_online", False)
                 if device_field(dev, "username"):
@@ -217,14 +211,25 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                 if device_field(dev, "password"):
                     cam.password = device_field(dev, "password")
                 cam.save()
-                found_ids.discard(cam.id)
+                updated += 1
 
             if new_devices:
-                Camera.objects.bulk_create(new_devices, batch_size=10)
+                Camera.objects.bulk_create(new_devices, batch_size=50)
 
-            for cam in camera_set:
-                if cam.id in found_ids:
-                    cam.is_online = False
+            stale = hall.camera_set.exclude(device_sn__in=edge_sns)
+            stale_count = stale.count()
+            if stale_count:
+                stale.update(is_active=False, is_online=False)
+
+            print(f"\tcreated={len(new_devices)} updated={updated} deactivated={stale_count}")
+            camera_set = list(
+                Camera.objects.filter(hall_id=hall.id, is_active=True).order_by("id")
+            )
+            update_cameras = {
+                cam.device_sn: cam.id
+                for cam in camera_set
+                if cam.device_sn
+            }
 
             for cam_id in update_cameras.values():
                 run_update_camera_info(cam_id)

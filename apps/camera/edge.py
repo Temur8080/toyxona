@@ -1,5 +1,4 @@
 import requests
-from rest_framework.exceptions import ValidationError
 
 from apps.camera.serializers import DeviceInfo
 
@@ -51,16 +50,23 @@ def normalize_edge_device(raw):
         or ""
     )
     if isinstance(ip, str):
-        ip = ip.strip()
+        ip = ip.strip() or None
 
     return {
         "device_sn": sn,
         "mac": mac or "unknown",
-        "ip_v4_address": ip or "0.0.0.0",
+        "ip": ip,
         "is_online": bool(raw.get("is_online", True)),
         "username": (raw.get("username") or "").strip(),
         "password": (raw.get("password") or "").strip(),
     }
+
+
+def device_field(dev, name, default=None):
+    """DRF validated_data yoki normalize dict — ikkala kalitni qo'llab-quvvatlaydi."""
+    if name == "ip":
+        return dev.get("ip") or dev.get("ip_v4_address") or default
+    return dev.get(name, default)
 
 
 def parse_edge_devices(host, token, timeout=15):
@@ -74,8 +80,5 @@ def parse_edge_devices(host, token, timeout=15):
         return []
 
     serializer = DeviceInfo(data=rows, many=True)
-    try:
-        serializer.is_valid(raise_exception=True)
-    except ValidationError as exc:
-        raise ValueError(f"DeviceInfo: {exc.detail}") from exc
-    return serializer.validated_data
+    serializer.is_valid(raise_exception=True)
+    return [dict(item) for item in serializer.validated_data]

@@ -31,7 +31,7 @@ class CameraRoiSerializer(serializers.Serializer):
 class DeviceInfo(serializers.Serializer):
     device_sn = serializers.CharField(required=True)
     mac = serializers.CharField(required=False, allow_blank=True, default="unknown")
-    ip = serializers.CharField(required=False, allow_blank=True, default="0.0.0.0", source='ip_v4_address')
+    ip = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=None)
     is_online = serializers.BooleanField(required=False, default=False)
     username = serializers.CharField(required=False, allow_blank=True, default="")
     password = serializers.CharField(required=False, allow_blank=True, default="")

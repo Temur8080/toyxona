@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from apps.camera.edge import parse_edge_devices
+from apps.camera.edge import device_field, parse_edge_devices
 from apps.camera.models import Camera
 from apps.main.models import Hall
 from toyxona.celery import app

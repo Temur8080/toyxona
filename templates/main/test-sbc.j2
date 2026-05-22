@@ -22,7 +22,7 @@
                 <tr>
                     <td>{{ row.device_sn }}</td>
                     <td>{{ row.mac }}</td>
-                    <td>{{ row.ip }}</td>
+                    <td>{{ row.ip or "—" }}</td>
                 </tr>
             {% else %}
                 <tr>

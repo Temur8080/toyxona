@@ -63,10 +63,18 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 messages.error(request, _("Kameralarni yuklashda xato: {0}").format(exc))
             return redirect('camera:list', self.hall.id)
 
+        if request.GET.get('activate_all') == 'true' and request.user.has_perm('camera.change_camera'):
+            n = Camera.objects.filter(hall_id=self.hall.id, is_active=False).update(is_active=True)
+            messages.success(request, _("{0} ta kamera faollashtirildi").format(n))
+            return redirect('camera:list', self.hall.id)
+
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return super().get_queryset().filter(hall_id=self.hall.id, is_active=True).order_by("id")
+        qs = super().get_queryset().filter(hall_id=self.hall.id)
+        if self.request.GET.get('show_all') != 'true':
+            qs = qs.filter(is_active=True)
+        return qs.order_by("id")
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.user.has_perm("camera.change_camera"):
@@ -108,6 +116,13 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context["PAGE_TITLE"] = str(self.hall)
         context["PAGE_SUBTITLE"] = _("Kamera snapshot va live stream")
         context["updating"] = self.get_updating()
+        hall_id = self.hall.id
+        context["camera_counts"] = {
+            "active": Camera.objects.filter(hall_id=hall_id, is_active=True).count(),
+            "inactive": Camera.objects.filter(hall_id=hall_id, is_active=False).count(),
+            "total": Camera.objects.filter(hall_id=hall_id).count(),
+        }
+        context["show_all"] = self.request.GET.get("show_all") == "true"
         return context
 
     def get_updating(self):

@@ -2,14 +2,31 @@
 
 {% block page_content %}
 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-    <div class="d-flex flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
         {% if perms.camera.change_camera %}
-            <a href="?load=true" class="btn btn-primary">
+            <a href="?load=true" class="btn btn-primary btn-sm">
                 <i class="bi bi-cloud-download me-1"></i>{{ _("Kameralarni yuklash") }}
             </a>
-            <button type="button" class="btn btn-outline-primary" id="id_update_all">{{ _("Rasmlarni yangilash") }}</button>
-            <a href="?o=true" class="btn btn-outline-primary">{{ _("Onlaynlarni yangilash") }}</a>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="id_update_all">{{ _("Rasmlarni yangilash") }}</button>
+            <a href="?o=true" class="btn btn-outline-primary btn-sm">{{ _("Onlaynlarni yangilash") }}</a>
+            {% if camera_counts.inactive > 0 %}
+                <a href="?activate_all=true" class="btn btn-outline-success btn-sm"
+                   onclick="return confirm('{{ _('Barcha nofaol kameralarni faollashtirasizmi?') }}');">
+                    {{ _("Barchasini faollashtirish") }} ({{ camera_counts.inactive }})
+                </a>
+            {% endif %}
         {% endif %}
+        {% if show_all %}
+            <a href="{{ url('camera:list', hall.id) }}" class="btn btn-outline-secondary btn-sm">{{ _("Faqat faollar") }}</a>
+        {% else %}
+            <a href="?show_all=true" class="btn btn-outline-secondary btn-sm">
+                {{ _("Barchasi") }} ({{ camera_counts.total }})
+            </a>
+        {% endif %}
+        <span class="small text-muted">
+            {{ _("Faol") }}: {{ camera_counts.active }}
+            {% if camera_counts.inactive %} · {{ _("Nofaol") }}: {{ camera_counts.inactive }}{% endif %}
+        </span>
     </div>
     {% if updating %}
         <span class="status-pill online"><i class="bi bi-arrow-repeat"></i> {{ _("Yangilanmoqda...") }}</span>
@@ -32,7 +49,10 @@
                 {% endif %}
             </a>
             <div class="camera-card-body">
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if not cam.is_active %}
+                        <span class="status-pill offline">{{ _("Nofaol") }}</span>
+                    {% endif %}
                     <span class="status-pill {{ 'online' if cam.is_online else 'offline' }}">
                         {{ _("Online") if cam.is_online else _("Offline") }}
                     </span>

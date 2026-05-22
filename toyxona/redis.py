@@ -39,3 +39,7 @@ def redis_expire(key, seconds):
 
 def redis_delete(key):
     _redis_call(None, REDIS_CLIENT.delete, key)
+
+
+def redis_ttl(key):
+    return _redis_call(-2, REDIS_CLIENT.ttl, key)

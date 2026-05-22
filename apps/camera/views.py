@@ -20,7 +20,7 @@ from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras
 from apps.main.hall_status import refresh_allowed_halls
 from apps.main.models import Hall
 from toyxona.helpers import to_int
-from toyxona.redis import redis_exists
+from toyxona.redis import redis_delete, redis_exists, redis_ttl
 from toyxona.security import camera_signer
 
 
@@ -111,7 +111,15 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return context
 
     def get_updating(self):
-        return redis_exists(HALL_SNAPSHOT_UPDATE_KEY.format(self.hall.id))
+        key = HALL_SNAPSHOT_UPDATE_KEY.format(self.hall.id)
+        if not redis_exists(key):
+            return False
+        ttl = redis_ttl(key)
+        # Celery ishlamasa qulf 5 daqiqadan keyin o'zi tugaydi; -1 = eski qulf
+        if ttl in (-1, -2):
+            redis_delete(key)
+            return False
+        return True
 
 
 class CameraPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):

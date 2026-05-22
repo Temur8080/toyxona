@@ -95,23 +95,40 @@ def update_camera_info(self, camera_id, started_at=None):
 
 
 def run_sync_cameras(hall_id, force_update=False):
+    """Rasm yangilash: Celery yo'q bo'lsa sinxron ishlaydi (qotib qolmaslik uchun)."""
+    import os
+
     key = HALL_SNAPSHOT_UPDATE_KEY.format(hall_id)
-    if not redis_set_nx(key, "-", ex=3600):
+    use_celery = os.getenv("USE_CELERY_CAMERA_SYNC", "false").lower() == "true"
+
+    if not use_celery:
+        sync_cameras(
+            hall_id,
+            force_update=force_update,
+            clear_redis_key=False,
+            skip_snapshots=not force_update,
+        )
+        return True
+
+    if not redis_set_nx(key, "-", ex=300):
         return False
     try:
         sync_cameras.apply_async(kwargs={
-            'hall_id': hall_id,
-            'force_update': force_update,
-            'clear_redis_key': True,
+            "hall_id": hall_id,
+            "force_update": force_update,
+            "clear_redis_key": True,
         })
+        return True
     except Exception as exc:
         print(f"sync_cameras async failed: {exc}")
-        if settings.DEBUG:
-            sync_cameras(hall_id, force_update=force_update, clear_redis_key=True)
-        else:
-            redis_delete(key)
-            return False
-    return True
+        redis_delete(key)
+        sync_cameras(
+            hall_id,
+            force_update=force_update,
+            clear_redis_key=True,
+            skip_snapshots=not force_update,
+        )
+        return True
 
 
 @app.task(ignore_result=True, max_retries=None)

@@ -14,9 +14,10 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.generic import DetailView, ListView
 
+from apps.camera.edge_proxy import ACCESS_TOKEN, fetch_snapshot_bytes
 from apps.camera.models import Camera
 from apps.camera.serializers import CameraRoiSerializer
-from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras
+from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras, save_screenshot
 from apps.main.hall_choice import HallChoiceView
 from apps.main.models import Hall
 from toyxona.helpers import to_int
@@ -170,6 +171,8 @@ class CameraVerifyView(View):
             resp = HttpResponse("OK")
             resp["X-Device-SN"] = device_sn
             resp["X-Server-IP"] = hall.server_ip
+            if ACCESS_TOKEN:
+                resp["X-Edge-Authorization"] = f"Bearer {ACCESS_TOKEN}"
             return resp
         except Exception:
             if settings.DEBUG:
@@ -261,6 +264,27 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     def get_queryset(self):
         return super().get_queryset().filter(is_active=True)
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if request.GET.get("frame") == "1":
+            content, ctype = fetch_snapshot_bytes(self.object, timeout=60)
+            if content:
+                return HttpResponse(content, content_type=ctype)
+            return HttpResponse(status=404)
+        if request.GET.get("save_frame") == "1":
+            host = f"http://{self.object.hall.server_ip}:1984"
+            if self.object.device_sn and save_screenshot(
+                self.object,
+                f"{host}/api/snapshot/{self.object.device_sn}",
+                force_update=True,
+            ):
+                self.object.save(update_fields=["screenshot"])
+                messages.success(request, _("Snapshot saqlandi"))
+            else:
+                messages.error(request, _("Snapshot olinmadi (edge yoki token)"))
+            return redirect("camera:roi", self.object.pk)
+        return super().get(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         try:
@@ -271,7 +295,10 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
             self.object.save(update_fields=["roi"])
             from apps.camera.tasks import run_update_camera_info
             run_update_camera_info(self.object.id)
-            return HttpResponse(json.dumps({"ok": True}))
+            return HttpResponse(json.dumps({
+                "ok": True,
+                "message": _("ROI saqlandi"),
+            }))
         except Exception as exc:
             return HttpResponse(json.dumps({"error": str(exc)}), status=400)
 
@@ -280,4 +307,6 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         context["PAGE_TITLE"] = str(self.object.hall)
         context["PAGE_SUBTITLE"] = self.object.name
         context["roi_json"] = json.dumps(self.object.roi or [])
+        context["frame_url"] = f"{self.request.path}?frame=1"
+        context["has_saved_screenshot"] = bool(self.object.screenshot)
         return context

@@ -26,7 +26,30 @@ function init_stream(token, container = null) {
 
     const url = new URL(`${wsScheme}://${streamHost}/camera/stream/?token=${token}`, location.href);
     el.src = url.href;
+
+    const errBox = document.createElement("div");
+    errBox.className = "alert alert-danger d-none mt-2 small";
+    errBox.setAttribute("role", "alert");
     wrap.appendChild(el);
+    wrap.appendChild(errBox);
+
+    const showErr = (msg) => {
+        errBox.textContent = msg;
+        errBox.classList.remove("d-none");
+    };
+
+    el.addEventListener("error", () => showErr(
+        "Live stream xato. .env da CONTROL_ACCESS_TOKEN va CAMERA_STREAM_HOST=176.101.56.247 tekshiring; admin da kamera login/parol to'ldirilgan bo'lsin."
+    ));
+
+    const obs = new MutationObserver(() => {
+        const status = el.querySelector(".status");
+        if (status && status.innerText && status.innerText !== "loading" && status.innerText.length > 2) {
+            showErr(status.innerText);
+        }
+    });
+    obs.observe(el, {childList: true, subtree: true, characterData: true});
+
     return el;
 }
 

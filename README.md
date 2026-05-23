@@ -77,7 +77,11 @@ flowchart LR
 3. SmartBozor nginx dan tekshirish: `grep -A20 camera/stream /etc/nginx/sites-enabled/*`
 4. Gunicorn: `gunicorn toyxona.wsgi -b 127.0.0.1:8000`
 5. Admin: har kamerada **username/password** (RTSP) to'ldirilgan bo'lsin
-6. `python manage.py camera-update --id 1 --no-snapshots` keyin **Live** tugmasi
+6. `.env`: `CONTROL_ACCESS_TOKEN` haqiqiy token (SmartBozor `.env` dan)
+7. Nginx reload: `deploy/nginx-toyxona.conf` (Edge ga `Authorization` header yuboradi)
+8. **Live** — preview sahifasi; **ROI** — `?frame=1` edge dan rasm (screenshot bo'lmasa ham)
+
+**ROI rasm yo'q bo'lsa:** ROI sahifasida «Rasmni edge dan yuklash» yoki `python manage.py camera-update --id 1` (snapshots bilan).
 
 Agar stream ishlamasa, SmartBozor serveridagi `proxy_pass` yo'lini `deploy/nginx-toyxona.conf` ga moslashtiring.
 

@@ -27,7 +27,7 @@ def edge_get(server_ip, path, timeout=None):
 
 
 def fetch_snapshot_bytes(camera, timeout=None):
-    """Kamera snapshot (AI yoki oddiy)."""
+    """Kamera snapshot (AI yoki oddiy) — faqat edge."""
     if not camera.device_sn or not camera.hall.server_ip:
         return None, None
     sn = camera.device_sn
@@ -43,3 +43,27 @@ def fetch_snapshot_bytes(camera, timeout=None):
         except Exception:
             continue
     return None, None
+
+
+def _read_saved_screenshot(camera):
+    if not camera.screenshot:
+        return None, None
+    try:
+        with camera.screenshot.open("rb") as fh:
+            data = fh.read()
+        if len(data) > 500:
+            return data, "image/jpeg"
+    except Exception:
+        pass
+    return None, None
+
+
+def fetch_camera_frame_bytes(camera, timeout=None):
+    """Edge snapshot; ishlamasa — saqlangan screenshot (502 oldini oladi)."""
+    content, ctype = fetch_snapshot_bytes(camera, timeout=timeout)
+    if content:
+        return content, ctype, "edge"
+    content, ctype = _read_saved_screenshot(camera)
+    if content:
+        return content, ctype, "cache"
+    return None, None, None

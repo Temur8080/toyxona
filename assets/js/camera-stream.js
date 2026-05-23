@@ -40,6 +40,8 @@ function startSnapshotFallback(root, frameUrl) {
 
     let active = true;
     let busy = false;
+    let failStreak = 0;
+    let delayMs = 1000;
 
     async function tick() {
         if (!active || busy) return;
@@ -54,9 +56,17 @@ function startSnapshotFallback(root, frameUrl) {
             img.src = URL.createObjectURL(blob);
             if (old) URL.revokeObjectURL(old);
             img.dataset.blobUrl = img.src;
+            const src = resp.headers.get("X-Frame-Source");
+            badge.textContent = src === "cache" ? "CACHE" : "SNAPSHOT";
+            failStreak = 0;
+            delayMs = 1000;
+        } catch (e) {
+            failStreak += 1;
+            delayMs = Math.min(15000, delayMs * 2);
+            if (failStreak >= 8) active = false;
         } finally {
             busy = false;
-            if (active) setTimeout(tick, 1000);
+            if (active) setTimeout(tick, delayMs);
         }
     }
 

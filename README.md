@@ -79,7 +79,7 @@ flowchart LR
 5. Admin: har kamerada **username/password** (RTSP) to'ldirilgan bo'lsin
 6. `.env`: `CONTROL_ACCESS_TOKEN` haqiqiy token (SmartBozor `.env` dan)
 7. Nginx reload: `deploy/nginx-toyxona.conf` (Edge ga `Authorization` header yuboradi)
-8. **Live** — WebRTC → snapshot fallback (H.265: edge da ffmpeg yoki substream H.264 kerak)
+8. **Live** — SmartBozor kabi WebRTC (webrtc/tcp,mse,hls,mjpeg); xatoda snapshot fallback
 9. **ROI** — `?frame=1` edge dan rasm (screenshot bo'lmasa ham)
 
 **ROI rasm yo'q bo'lsa:** ROI sahifasida «Rasmni edge dan yuklash» yoki `python manage.py camera-update --id 1` (snapshots bilan).

@@ -1,13 +1,10 @@
 {% extends 'layouts/auth.j2' %}
 
 {% block page_content %}
-<div class="video-shell">
+<div class="video-container">
     <div class="text-center p-5 text-white">
         <div class="spinner-border"></div>
         <div class="mt-3">{{ _("Live video yuklanmoqda...") }}</div>
-        <p class="small text-white-50 mt-2 mb-0">
-            {{ _("Avval WebRTC, keyin snapshot rejimi (H.265 kameralar).") }}
-        </p>
     </div>
 </div>
 {% endblock %}
@@ -15,14 +12,12 @@
 {% block extra_js %}
 <script type="module" src="{{ static('vendor/go2rts/video-stream.min.js') }}?{{ STATIC_VERSION }}"></script>
 <script
-    data-stream-host="{{ stream_host|default('', true) }}"
     data-live-frame-url="{{ live_frame_url }}"
     src="{{ static('js/camera-stream.js') }}?{{ STATIC_VERSION }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const shell = document.querySelector(".video-shell");
     const script = document.querySelector("[data-live-frame-url]");
-    init_stream("{{ (object.hall_id ~ '|' ~ object.device_sn)|sign }}", shell, {
+    init_stream("{{ (object.hall_id ~ '|' ~ object.device_sn)|sign }}", null, {
         frameUrl: script?.getAttribute("data-live-frame-url") || "",
     });
 });

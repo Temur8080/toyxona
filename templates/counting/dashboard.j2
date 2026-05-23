@@ -1,6 +1,19 @@
 {% extends 'layouts/auth.j2' %}
 
 {% block page_content %}
+{% if is_toy_now %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
+    <i class="bi bi-balloon-fill fs-4"></i>
+    <div>
+        <strong>{{ _("Toy bor!") }}</strong>
+        {{ _("Odamlar soni") }} {{ toy_threshold }}+ ({{ _("hozir") }}: {{ current_count|intcomma }}).
+        {% if active_toy %}
+            <span class="text-muted">{{ _("Boshlangan") }}: {{ active_toy.started_at|datetime_format }}, {{ _("eng ko'p") }}: {{ active_toy.peak_count|intcomma }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <div class="stat-grid">
     <div class="stat-card">
         <div class="stat-card-icon primary"><i class="bi bi-people-fill"></i></div>
@@ -23,12 +36,19 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-card-icon {% if fill_percent and fill_percent > 90 %}danger{% elif fill_percent and fill_percent > 70 %}warning{% else %}primary{% endif %}">
-            <i class="bi bi-percent"></i>
+        <div class="stat-card-icon {% if is_toy_now %}warning{% elif fill_percent and fill_percent > 90 %}danger{% elif fill_percent and fill_percent > 70 %}warning{% else %}primary{% endif %}">
+            <i class="bi bi-{% if is_toy_now %}balloon{% else %}percent{% endif %}"></i>
         </div>
         <div>
-            <div class="stat-card-value">{% if fill_percent is not none %}{{ fill_percent }}%{% else %}—{% endif %}</div>
-            <div class="stat-card-label">{{ _("To'ldirilganlik") }}</div>
+            <div class="stat-card-value">{% if is_toy_now %}{{ _("Toy") }}{% elif fill_percent is not none %}{{ fill_percent }}%{% else %}—{% endif %}</div>
+            <div class="stat-card-label">{% if is_toy_now %}{{ _("≥") }} {{ toy_threshold }} {{ _("odam") }}{% else %}{{ _("To'ldirilganlik") }}{% endif %}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon success"><i class="bi bi-cpu"></i></div>
+        <div>
+            <div class="stat-card-value">{{ ai_cameras|intcomma }}</div>
+            <div class="stat-card-label">{{ _("AI sanash kameralari") }}</div>
         </div>
     </div>
 </div>
@@ -92,7 +112,12 @@
                     {% for row in history %}
                         <tr>
                             <td>{{ row.recorded_at|datetime_format }}</td>
-                            <td><strong>{{ row.count|intcomma }}</strong></td>
+                            <td>
+                                <strong>{{ row.count|intcomma }}</strong>
+                                {% if row.count >= toy_threshold %}
+                                    <span class="badge text-bg-warning ms-1">{{ _("Toy") }}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ row.camera.name if row.camera else "—" }}</td>
                         </tr>
                     {% endfor %}
@@ -101,7 +126,7 @@
             {% else %}
                 <div class="empty-state py-4">
                     <i class="bi bi-table"></i>
-                    <p>{{ _("Ma'lumot yo'q. sync-people-count buyrug'ini ishga tushiring") }}</p>
+                    <p>{{ _("Ma'lumot yo'q. Celery Beat yoki: python manage.py sync-people-count") }}</p>
                 </div>
             {% endif %}
         </div>

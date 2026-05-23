@@ -183,6 +183,11 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Odamlar soni: >= TOY_EVENT_THRESHOLD bo'lsa «toy» (tadbir) hisoblanadi (12–15 tavsiya)
+TOY_EVENT_THRESHOLD = int(os.getenv("TOY_EVENT_THRESHOLD", "12"))
+# Avtomatik sanash intervali (soniya), Celery Beat uchun
+PEOPLE_COUNT_SYNC_INTERVAL = int(os.getenv("PEOPLE_COUNT_SYNC_INTERVAL", "300"))
+
 OTP_TOTP_ISSUER = "toyxona.uz"
 OTP_ADMIN_HIDE_SENSITIVE_DATA = os.getenv('OTP_ADMIN_HIDE_SENSITIVE_DATA', '').lower() != 'false'
 OTP_ADMIN_REQUIRED = os.getenv('OTP_ADMIN_REQUIRED', 'true').lower() == 'true'

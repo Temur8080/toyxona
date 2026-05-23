@@ -12,3 +12,12 @@ app.conf.enable_utc = False
 app.conf.broker_connection_retry_on_startup = True
 
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+interval = getattr(settings, "PEOPLE_COUNT_SYNC_INTERVAL", 300)
+if settings.CELERY_BROKER_URL:
+    app.conf.beat_schedule = {
+        "sync-people-count": {
+            "task": "apps.counting.tasks.sync_people_count_all_halls",
+            "schedule": float(interval),
+        },
+    }

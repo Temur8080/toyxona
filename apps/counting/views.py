@@ -5,7 +5,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
 
 from apps.camera.models import Camera
-from apps.counting.models import PeopleCount
+from apps.counting.models import HallEvent, PeopleCount
+from apps.counting.services import toy_event_threshold
 from apps.main.hall_choice import HallChoiceView
 from apps.main.models import Hall
 
@@ -46,9 +47,20 @@ class CountingDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         context["PAGE_SUBTITLE"] = _("Odamlar soni va bugungi dinamika")
 
         latest = PeopleCount.objects.filter(hall_id=hall.id).order_by('-recorded_at').first()
+        threshold = toy_event_threshold()
+        active_event = HallEvent.objects.filter(hall_id=hall.id, is_active=True).first()
+
         context["current_count"] = latest.count if latest else 0
         context["current_time"] = timezone.localtime(latest.recorded_at) if latest else None
         context["max_capacity"] = hall.max_capacity
+        context["toy_threshold"] = threshold
+        context["active_toy"] = active_event
+        context["is_toy_now"] = bool(active_event) or (
+            latest and latest.count >= threshold
+        )
+        context["ai_cameras"] = Camera.objects.filter(
+            hall_id=hall.id, is_active=True, use_ai=True,
+        ).count()
         context["fill_percent"] = (
             round(latest.count / hall.max_capacity * 100, 1)
             if latest and hall.max_capacity else None

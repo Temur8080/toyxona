@@ -49,7 +49,16 @@ python manage.py runserver
 python manage.py camera-update
 python manage.py sync-people-count
 celery -A toyxona worker -l INFO
+celery -A toyxona beat -l INFO
 ```
+
+### Avtomatik odam sanash va «toy»
+
+- Faol onlayn kameralarda `use_ai=True` qilinadi (edge `/api/update-devices`)
+- Har `PEOPLE_COUNT_SYNC_INTERVAL` soniyada (default 300) edge dan son olinadi
+- `TOY_EVENT_THRESHOLD` (default **12**) dan oshsa — **toy bor** (`HallEvent`)
+- Cron alternativi: `*/5 * * * * cd /var/www/toyxona && venv/bin/python manage.py sync-people-count`
+- ROI saqlanganda kamera avtomatik AI sanashga yoqiladi
 
 ## URL lar
 

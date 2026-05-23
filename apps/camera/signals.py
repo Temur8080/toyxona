@@ -52,5 +52,10 @@ def after_camera_saved(sender, instance, created, **kwargs):
         if old != new:
             changed[field_name] = True
 
+    if "roi" in changed and instance.roi and isinstance(instance.roi, list) and len(instance.roi) > 0:
+        if not instance.use_ai:
+            Camera.objects.filter(pk=instance.pk).update(use_ai=True)
+            instance.use_ai = True
+
     if fields & set(changed.keys()):
         run_update_camera_info(instance.pk)

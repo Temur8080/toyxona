@@ -30,13 +30,6 @@
             <div class="stat-card-label">{{ _("Bugungi yozuvlar") }}</div>
         </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-card-icon warning"><i class="bi bi-balloon-fill"></i></div>
-        <div>
-            <div class="stat-card-value">{{ active_toys_count|intcomma }}</div>
-            <div class="stat-card-label">{{ _("Faol toy") }} (≥{{ toy_threshold }})</div>
-        </div>
-    </div>
 </div>
 
 <div class="row g-4">
@@ -52,15 +45,10 @@
                                     <h3 class="hall-card-title">{{ hall }}</h3>
                                     <div class="hall-card-meta">{{ hall.district.region.name }} · {{ hall.district.name }}</div>
                                 </div>
-                                <div class="d-flex flex-column align-items-end gap-1">
-                                    {% if hall.is_toy_now %}
-                                        <span class="badge text-bg-warning">{{ _("Toy") }}</span>
-                                    {% endif %}
-                                    <span class="status-pill {{ 'online' if hall.is_online else 'offline' }}">
-                                        <i class="bi bi-circle-fill" style="font-size:.5rem"></i>
-                                        {{ _("Online") if hall.is_online else _("Offline") }}
-                                    </span>
-                                </div>
+                                <span class="status-pill {{ 'online' if hall.is_online else 'offline' }}">
+                                    <i class="bi bi-circle-fill" style="font-size:.5rem"></i>
+                                    {{ _("Online") if hall.is_online else _("Offline") }}
+                                </span>
                             </div>
                             <div class="d-flex justify-content-between align-items-end">
                                 <div>

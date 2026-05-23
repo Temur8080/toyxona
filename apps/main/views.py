@@ -14,8 +14,7 @@ from django_jinja.views.generic import DetailView
 
 from apps.camera.edge import parse_edge_devices
 from apps.camera.models import Camera
-from apps.counting.models import HallEvent, PeopleCount
-from apps.counting.services import toy_event_threshold
+from apps.counting.models import PeopleCount
 from apps.main.models import Hall
 
 ACCESS_TOKEN = os.environ.get("CONTROL_ACCESS_TOKEN")
@@ -58,21 +57,11 @@ class MainDashboardView(LoginRequiredMixin, TemplateView):
             online=Count('id', filter=Q(is_online=True)),
         )
 
-        threshold = toy_event_threshold()
-        active_events = {
-            e.hall_id: e
-            for e in HallEvent.objects.filter(hall_id__in=hall_ids, is_active=True)
-        }
-
         for hall in halls:
             if hall.latest_count and hall.max_capacity:
                 hall.fill_percent = round(hall.latest_count / hall.max_capacity * 100, 1)
             else:
                 hall.fill_percent = None
-            hall.active_toy = active_events.get(hall.id)
-            hall.is_toy_now = bool(hall.active_toy) or (
-                hall.latest_count is not None and hall.latest_count >= threshold
-            )
 
         context.update({
             'PAGE_TITLE': _('Dashboard'),
@@ -89,8 +78,6 @@ class MainDashboardView(LoginRequiredMixin, TemplateView):
                 hall_id__in=hall_ids,
                 recorded_at__date=timezone.localdate(),
             ).count(),
-            'active_toys_count': len(active_events),
-            'toy_threshold': threshold,
         })
         return context
 

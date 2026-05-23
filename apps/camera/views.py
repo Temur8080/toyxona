@@ -14,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from apps.camera.edge_proxy import ACCESS_TOKEN, fetch_camera_frame_bytes, fetch_snapshot_bytes
+from apps.camera.edge_proxy import ACCESS_TOKEN, fetch_snapshot_bytes
 from apps.camera.models import Camera
 from apps.camera.serializers import CameraRoiSerializer
 from apps.camera.tasks import HALL_SNAPSHOT_UPDATE_KEY, run_sync_cameras, save_screenshot
@@ -56,7 +56,7 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
             try:
                 before = Camera.objects.filter(hall_id=self.hall.id, is_active=True).count()
-                sync_cameras(self.hall.id, force_update=False, skip_snapshots=True, push_edge=False)
+                sync_cameras(self.hall.id, force_update=False, skip_snapshots=True)
                 edge_n = len(parse_edge_devices(
                     self.hall.server_ip,
                     os.environ.get("CONTROL_ACCESS_TOKEN"),
@@ -165,21 +165,13 @@ class CameraLiveFrameView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "camera.view_camera"
 
     def get(self, request, pk, *args, **kwargs):
-        camera = get_object_or_404(
-            Camera.objects.select_related("hall").filter(is_active=True),
-            pk=pk,
-        )
-        content, ctype, source = fetch_camera_frame_bytes(camera, timeout=25)
+        camera = get_object_or_404(Camera.objects.filter(is_active=True), pk=pk)
+        content, ctype = fetch_snapshot_bytes(camera, timeout=20)
         if content:
             resp = HttpResponse(content, content_type=ctype)
-            resp["Cache-Control"] = "no-store, max-age=0"
-            resp["X-Frame-Source"] = source or "edge"
+            resp["Cache-Control"] = "no-store"
             return resp
-        return HttpResponse(
-            _("Kadr olinmadi — edge VPN/token yoki saqlangan screenshotni tekshiring."),
-            status=503,
-            content_type="text/plain; charset=utf-8",
-        )
+        return HttpResponse(status=502)
 
 
 class CameraVerifyView(View):
@@ -304,11 +296,9 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         if request.GET.get("frame") == "1":
-            content, ctype, source = fetch_camera_frame_bytes(self.object, timeout=60)
+            content, ctype = fetch_snapshot_bytes(self.object, timeout=60)
             if content:
-                resp = HttpResponse(content, content_type=ctype)
-                resp["X-Frame-Source"] = source or "edge"
-                return resp
+                return HttpResponse(content, content_type=ctype)
             return HttpResponse(status=404)
         if request.GET.get("save_frame") == "1":
             host = f"http://{self.object.hall.server_ip}:1984"

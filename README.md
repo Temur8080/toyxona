@@ -48,12 +48,8 @@ python manage.py runserver
 ```bash
 python manage.py camera-update
 python manage.py sync-people-count
-# Har 1–2 daqiqada (cron):
-# */2 * * * * cd /var/www/toyxona && venv/bin/python manage.py sync-people-count
 celery -A toyxona worker -l INFO
 ```
-
-**Odamlar soni:** dashboard ochilganda edge dan 60s da bir marta yuklanadi; doimiy yangilanish uchun `sync-people-count` cron qo'ying. Kameralarda **ROI** + **use_ai** bo'lishi kerak.
 
 ## URL lar
 

@@ -48,7 +48,9 @@ function startSnapshotFallback(root, frameUrl) {
             const url = new URL(frameUrl, location.href);
             url.searchParams.set("_", String(Date.now()));
             const resp = await fetch(url.href, { cache: "no-store", credentials: "same-origin" });
-            if (!resp.ok) throw new Error("frame");
+            if (!resp.ok || !(resp.headers.get("content-type") || "").includes("image")) {
+                throw new Error("frame");
+            }
             const blob = await resp.blob();
             const old = img.dataset.blobUrl;
             img.src = URL.createObjectURL(blob);

@@ -1,6 +1,7 @@
 /**
  * Live stream — VPS nginx → Edge go2rtc (VPN).
- * WebRTC orqali ikki hop juda qotadi; MSE/MJPEG barqarorroq.
+ * Kameralar ko'pincha H.265 — MSE H.264 talab qiladi (codec mismatch).
+ * MJPEG barcha brauzerlarda ishlaydi (biroz past FPS).
  */
 const wsScheme = location.protocol === "https:" ? "wss" : "ws";
 let streamHost = document.currentScript?.getAttribute("data-stream-host");
@@ -15,7 +16,7 @@ function init_stream(token, container = null) {
     host.appendChild(wrap);
 
     const el = document.createElement("video-stream");
-    el.mode = "mse,mjpeg";
+    el.mode = "mjpeg";
     el.media = "video";
     el.background = false;
     el.visibilityCheck = true;

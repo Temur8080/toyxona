@@ -7,7 +7,12 @@ try:
 except ImportError:
     pwd = None  # pwd is Unix-only; not available on Windows
 
-camera_signer = TimestampSigner(salt='camera-websocket-token', sep=":@:")
+camera_signer = TimestampSigner(salt='camera-websocket-token')
+
+
+def camera_stream_token(hall_id, device_sn):
+    """URL-safe payload: hall_id|device_sn (device_sn da ':' bo'lmasligi kerak)."""
+    return camera_signer.sign(f"{hall_id}|{device_sn}")
 
 
 def switch_to_www_data():

@@ -24,7 +24,8 @@ function init_stream(token, container = null) {
         streamHost = location.host;
     }
 
-    const url = new URL(`${wsScheme}://${streamHost}/camera/stream/?token=${token}`, location.href);
+    const url = new URL(`${wsScheme}://${streamHost}/camera/stream/`, location.href);
+    url.searchParams.set("token", token);
     el.src = url.href;
 
     const errBox = document.createElement("div");

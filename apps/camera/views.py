@@ -1,6 +1,6 @@
 import json
 import os
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 from django.conf import settings
@@ -162,12 +162,26 @@ class CameraPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
 class CameraVerifyView(View):
     def get(self, request, *args, **kwargs):
         try:
-            parsed = urlparse(request.META.get("HTTP_X_ORIGINAL_URI", ""))
-            token = parse_qs(parsed.query).get('token', [None])[0]
+            token = request.GET.get("token")
+            if not token:
+                parsed = urlparse(request.META.get("HTTP_X_ORIGINAL_URI", ""))
+                token = parse_qs(parsed.query).get("token", [None])[0]
             if not token:
                 raise ValueError("token missing")
-            hall_id, device_sn = camera_signer.unsign(token, max_age=30).split(":", 1)
-            hall = Hall.objects.get(id=hall_id)
+            token = unquote(token)
+
+            payload = camera_signer.unsign(token, max_age=3600)
+            if "|" in payload:
+                hall_id, device_sn = payload.split("|", 1)
+            else:
+                hall_id, device_sn = payload.split(":", 1)
+
+            hall = Hall.objects.get(id=int(hall_id))
+            if not hall.server_ip:
+                raise ValueError("hall server_ip missing")
+            if not device_sn:
+                raise ValueError("device_sn missing")
+
             resp = HttpResponse("OK")
             resp["X-Device-SN"] = device_sn
             resp["X-Server-IP"] = hall.server_ip

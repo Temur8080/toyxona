@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const wrap = document.createElement("div");
     wrap.className = "w-100";
     shell.appendChild(wrap);
-    init_stream("{{ (object.hall_id ~ ':' ~ object.device_sn)|sign }}", wrap);
+    init_stream("{{ (object.hall_id ~ '|' ~ object.device_sn)|sign }}", wrap);
 });
 </script>
 {% endblock %}

@@ -1,7 +1,7 @@
 from humanize import intcomma
 from jinja2.ext import Extension
 
-from toyxona.security import camera_signer
+from toyxona.security import camera_stream_token
 
 
 class ToyxonaUtils(Extension):
@@ -14,7 +14,10 @@ class ToyxonaUtils(Extension):
         environment.filters['datetime_format'] = self.datetime_format
 
     def sign(self, val):
-        return camera_signer.sign(val)
+        if "|" in str(val):
+            hall_id, device_sn = str(val).split("|", 1)
+            return camera_stream_token(hall_id, device_sn)
+        return camera_stream_token(val, "")
 
     def is_current(self, request, routes, extra_cond=None):
         routes_set = set(routes.split(","))

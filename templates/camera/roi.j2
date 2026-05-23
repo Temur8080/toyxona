@@ -65,7 +65,7 @@
 {% block extra_js %}
     <script type="application/json" id="id_saved">{{ object.roi|tojson }}</script>
     <script src="https://cdn.jsdelivr.net/npm/fabric@6.9.1/dist/index.min.js"></script>
-    <script src="{{ static("js/camera-roi.min.js") }}?{{ STATIC_VERSION }}"></script>
+    <script src="{{ static("js/camera-roi.js") }}?{{ STATIC_VERSION }}"></script>
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         const bg = document.querySelector("#id-roi-bg");
@@ -74,12 +74,14 @@
         const img = new Image();
         img.onload = function () {
             bg.style.backgroundImage = `url('${frameUrl}&_=${Date.now()}')`;
+            window.dispatchEvent(new Event("roi-frame-ready"));
         };
         img.onerror = function () {
             const loading = document.querySelector("#id_loading");
             if (loading) {
                 loading.innerHTML = '<p class="text-danger small">{{ _("Rasm olinmadi. Token, login/parol va edge serverni tekshiring.") }}</p>';
             }
+            window.dispatchEvent(new Event("roi-frame-ready"));
         };
         img.src = frameUrl + "&_=" + Date.now();
     });

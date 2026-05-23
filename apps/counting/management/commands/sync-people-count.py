@@ -1,27 +1,29 @@
 from django.core.management.base import BaseCommand
 
-from apps.counting.services import sync_all_halls, toy_event_threshold
+from apps.counting.services import sync_people_count_for_hall
+from apps.main.models import Hall
 
 
 class Command(BaseCommand):
-    help = "Edge AI: odam sanash + toy (>= threshold) aniqlash"
+    help = "Edge serverdan odamlar sonini yuklab oladi (/api/ai/people-count yoki /api/ai/states)"
 
     def add_arguments(self, parser):
-        parser.add_argument("--force", action="store_true", help="Vaqt tekshiruvsiz yangilash")
-        parser.add_argument("--hall", type=int, help="Faqat bitta toyxona id")
+        parser.add_argument("--hall", type=int, help="Faqat bitta toyxona ID")
+        parser.add_argument("--force", action="store_true", help="Oxirgi yozuv bilan bir xil bo'lsa ham saqlash")
 
     def handle(self, *args, **options):
-        from apps.main.models import Hall
-        from apps.counting.services import sync_hall_people_count
-
-        threshold = toy_event_threshold()
-        self.stdout.write(f"Toy threshold: >= {threshold} odam")
-
+        qs = Hall.objects.order_by("id")
         if options.get("hall"):
-            hall = Hall.objects.get(pk=options["hall"])
-            saved, count, msg = sync_hall_people_count(hall, force=options["force"])
-            self.stdout.write(f"{hall}: {msg} count={count} saved={saved}")
-            return
+            qs = qs.filter(pk=options["hall"])
 
-        for hall, saved, count, msg in sync_all_halls(force=options["force"]):
-            self.stdout.write(f"{hall}: {msg} count={count} saved={saved}")
+        for hall in qs:
+            if not hall.server_ip:
+                continue
+            print("Checking", hall, "...")
+            result = sync_people_count_for_hall(hall.id, force=options.get("force"))
+            if not result.get("ok"):
+                print("\t", result.get("error", "failed"), f"(AI kameralar: {result.get('ai_cameras', '?')})")
+            elif result.get("skipped"):
+                print("\talready up to date:", result.get("count"))
+            elif result.get("saved"):
+                print("\tsaved:", result.get("count"), "@", result.get("recorded_at"))

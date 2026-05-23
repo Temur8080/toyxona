@@ -91,8 +91,7 @@
 
     const aiQueue = [];
     let aiActive = 0;
-    const AI_MAX_PARALLEL = 3;
-    const AI_INTERVAL_MS = 12000;
+    const AI_MAX_PARALLEL = 2;
 
     function pumpAiQueue() {
         while (aiActive < AI_MAX_PARALLEL && aiQueue.length) {
@@ -129,7 +128,6 @@
         if (!imgs.length || !("IntersectionObserver" in window)) {
             imgs.forEach(img => { img.dataset.aiVisible = "1"; });
             queueVisibleAiThumbnails();
-            setInterval(queueVisibleAiThumbnails, AI_INTERVAL_MS);
             return;
         }
         const obs = new IntersectionObserver(entries => {
@@ -139,7 +137,6 @@
             queueVisibleAiThumbnails();
         }, {rootMargin: "80px", threshold: 0.05});
         imgs.forEach(img => obs.observe(img));
-        setInterval(queueVisibleAiThumbnails, AI_INTERVAL_MS);
     });
 </script>
 {% if updating %}

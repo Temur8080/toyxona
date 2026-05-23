@@ -1,28 +1,42 @@
 {% extends 'layouts/auth.j2' %}
 
 {% block page_content %}
-{% if is_toy_now %}
-<div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
-    <i class="bi bi-balloon-fill fs-4"></i>
-    <div>
-        <strong>{{ _("Toy bor!") }}</strong>
-        {{ _("Odamlar soni") }} {{ toy_threshold }}+ ({{ _("hozir") }}: {{ current_count|intcomma }}).
-        {% if active_toy %}
-            <span class="text-muted">{{ _("Boshlangan") }}: {{ active_toy.started_at|datetime_format }}, {{ _("eng ko'p") }}: {{ active_toy.peak_count|intcomma }}</span>
+{% if sync_result and not sync_result.ok %}
+    <div class="alert alert-warning">
+        {{ _("Edge dan ma'lumot olinmadi") }}: {{ sync_result.error }}
+        {% if sync_result.ai_cameras is defined %}
+            · {{ _("AI kameralar") }}: {{ sync_result.ai_cameras }}
         {% endif %}
     </div>
-</div>
 {% endif %}
+
+{% if ai_cameras == 0 %}
+    <div class="alert alert-info">
+        {{ _("Sanash uchun kameralarda ROI chizing va «AI bilan sanash» yoqilgan bo'lsin.") }}
+        <a href="{{ url('camera:list', hall.id) }}">{{ _("Kameralar") }}</a>
+    </div>
+{% elif roi_cameras < ai_cameras %}
+    <div class="alert alert-info">
+        {{ _("Ba'zi AI kameralarda ROI yo'q ({0}/{1})").format(roi_cameras, ai_cameras) }}
+    </div>
+{% endif %}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="?sync=1" class="btn btn-primary btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>{{ _("Edge dan yangilash") }}
+    </a>
+    <span class="small text-muted align-self-center" id="id_count_refresh_hint"></span>
+</div>
 
 <div class="stat-grid">
     <div class="stat-card">
         <div class="stat-card-icon primary"><i class="bi bi-people-fill"></i></div>
         <div>
-            <div class="stat-card-value">{{ current_count|intcomma }}</div>
+            <div class="stat-card-value" id="id_current_count">{{ current_count|intcomma }}</div>
             <div class="stat-card-label">{{ _("Hozirgi odamlar soni") }}</div>
-            {% if current_time %}
-                <div class="small text-muted mt-1">{{ current_time|datetime_format }}</div>
-            {% endif %}
+            <div class="small text-muted mt-1" id="id_current_time">
+                {% if current_time %}{{ current_time|datetime_format }}{% else %}—{% endif %}
+            </div>
         </div>
     </div>
     <div class="stat-card">
@@ -36,19 +50,12 @@
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-card-icon {% if is_toy_now %}warning{% elif fill_percent and fill_percent > 90 %}danger{% elif fill_percent and fill_percent > 70 %}warning{% else %}primary{% endif %}">
-            <i class="bi bi-{% if is_toy_now %}balloon{% else %}percent{% endif %}"></i>
+        <div class="stat-card-icon {% if fill_percent and fill_percent > 90 %}danger{% elif fill_percent and fill_percent > 70 %}warning{% else %}primary{% endif %}">
+            <i class="bi bi-percent"></i>
         </div>
         <div>
-            <div class="stat-card-value">{% if is_toy_now %}{{ _("Toy") }}{% elif fill_percent is not none %}{{ fill_percent }}%{% else %}—{% endif %}</div>
-            <div class="stat-card-label">{% if is_toy_now %}{{ _("≥") }} {{ toy_threshold }} {{ _("odam") }}{% else %}{{ _("To'ldirilganlik") }}{% endif %}</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-icon success"><i class="bi bi-cpu"></i></div>
-        <div>
-            <div class="stat-card-value">{{ ai_cameras|intcomma }}</div>
-            <div class="stat-card-label">{{ _("AI sanash kameralari") }}</div>
+            <div class="stat-card-value" id="id_fill_percent">{% if fill_percent is not none %}{{ fill_percent }}%{% else %}—{% endif %}</div>
+            <div class="stat-card-label">{{ _("To'ldirilganlik") }}</div>
         </div>
     </div>
 </div>
@@ -57,10 +64,11 @@
     <div class="app-page-card mb-4">
         <div class="d-flex justify-content-between mb-2">
             <span class="text-muted">{{ _("Sig'im holati") }}</span>
-            <strong>{{ current_count|intcomma }} / {{ max_capacity|intcomma }}</strong>
+            <strong><span id="id_count_ratio">{{ current_count|intcomma }}</span> / {{ max_capacity|intcomma }}</strong>
         </div>
         <div class="capacity-bar" style="height:6px">
             <div class="capacity-bar-fill {% if fill_percent > 90 %}danger{% elif fill_percent > 70 %}warning{% endif %}"
+                 id="id_capacity_fill"
                  style="width: {{ fill_percent if fill_percent <= 100 else 100 }}%"></div>
         </div>
     </div>
@@ -84,7 +92,7 @@
             {% else %}
                 <div class="empty-state py-4">
                     <i class="bi bi-bar-chart"></i>
-                    <p>{{ _("Bugun ma'lumot yo'q") }}</p>
+                    <p>{{ _("Bugun ma'lumot yo'q — «Edge dan yangilash» yoki cron") }}</p>
                 </div>
             {% endif %}
 
@@ -112,12 +120,7 @@
                     {% for row in history %}
                         <tr>
                             <td>{{ row.recorded_at|datetime_format }}</td>
-                            <td>
-                                <strong>{{ row.count|intcomma }}</strong>
-                                {% if row.count >= toy_threshold %}
-                                    <span class="badge text-bg-warning ms-1">{{ _("Toy") }}</span>
-                                {% endif %}
-                            </td>
+                            <td><strong>{{ row.count|intcomma }}</strong></td>
                             <td>{{ row.camera.name if row.camera else "—" }}</td>
                         </tr>
                     {% endfor %}
@@ -126,10 +129,35 @@
             {% else %}
                 <div class="empty-state py-4">
                     <i class="bi bi-table"></i>
-                    <p>{{ _("Ma'lumot yo'q. Celery Beat yoki: python manage.py sync-people-count") }}</p>
+                    <p>{{ _("Ma'lumot yo'q") }}</p>
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const hint = document.querySelector("#id_count_refresh_hint");
+    const refresh = () => {
+        fetch("?format=json&_=" + Date.now(), {credentials: "same-origin"})
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+                const el = document.querySelector("#id_current_count");
+                if (el && data.current_count != null) {
+                    el.textContent = String(data.current_count).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                }
+                const t = document.querySelector("#id_current_time");
+                if (t) t.textContent = data.current_time || "—";
+                const fp = document.querySelector("#id_fill_percent");
+                if (fp && data.fill_percent != null) fp.textContent = data.fill_percent + "%";
+                if (hint) hint.textContent = new Date().toLocaleTimeString();
+            })
+            .catch(() => {});
+    };
+    setInterval(refresh, 60000);
+});
+</script>
 {% endblock %}

@@ -143,7 +143,7 @@ def run_sync_cameras(hall_id, force_update=False):
 
 
 @app.task(ignore_result=True, max_retries=None)
-def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapshots=False):
+def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapshots=False, push_edge=True):
     def remove_key():
         if clear_redis_key:
             redis_delete(HALL_SNAPSHOT_UPDATE_KEY.format(hall_id))
@@ -242,8 +242,9 @@ def sync_cameras(hall_id, force_update=False, clear_redis_key=False, skip_snapsh
                 if cam.device_sn
             }
 
-            for cam_id in update_cameras.values():
-                run_update_camera_info(cam_id)
+            if push_edge and not skip_snapshots:
+                for cam_id in update_cameras.values():
+                    run_update_camera_info(cam_id)
 
             if skip_snapshots:
                 print("\tsnapshots skipped")

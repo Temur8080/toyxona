@@ -48,17 +48,12 @@ python manage.py runserver
 ```bash
 python manage.py camera-update
 python manage.py sync-people-count
+# Har 1–2 daqiqada (cron):
+# */2 * * * * cd /var/www/toyxona && venv/bin/python manage.py sync-people-count
 celery -A toyxona worker -l INFO
-celery -A toyxona beat -l INFO
 ```
 
-### Avtomatik odam sanash va «toy»
-
-- Faol onlayn kameralarda `use_ai=True` qilinadi (edge `/api/update-devices`)
-- Har `PEOPLE_COUNT_SYNC_INTERVAL` soniyada (default 300) edge dan son olinadi
-- `TOY_EVENT_THRESHOLD` (default **12**) dan oshsa — **toy bor** (`HallEvent`)
-- Cron alternativi: `*/5 * * * * cd /var/www/toyxona && venv/bin/python manage.py sync-people-count`
-- ROI saqlanganda kamera avtomatik AI sanashga yoqiladi
+**Odamlar soni:** dashboard ochilganda edge dan 60s da bir marta yuklanadi; doimiy yangilanish uchun `sync-people-count` cron qo'ying. Kameralarda **ROI** + **use_ai** bo'lishi kerak.
 
 ## URL lar
 

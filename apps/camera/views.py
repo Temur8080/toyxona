@@ -56,7 +56,7 @@ class CameraListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
             try:
                 before = Camera.objects.filter(hall_id=self.hall.id, is_active=True).count()
-                sync_cameras(self.hall.id, force_update=False, skip_snapshots=True)
+                sync_cameras(self.hall.id, force_update=False, skip_snapshots=True, push_edge=False)
                 edge_n = len(parse_edge_devices(
                     self.hall.server_ip,
                     os.environ.get("CONTROL_ACCESS_TOKEN"),

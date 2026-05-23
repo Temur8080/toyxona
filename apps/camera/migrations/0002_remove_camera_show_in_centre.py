@@ -4,7 +4,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('camera', '0001_toyxona_initial'),
+        ('camera', '0002_rename_camera_hall_sn_idx_camera_came_hall_id_6ab9d3_idx'),
     ]
 
     operations = [

@@ -3,7 +3,7 @@
 {% block page_content %}
 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
     <div class="small text-muted">
-        {{ _("Odamlar skeletoni AI snapshot ustida chiziladi") }}
+        {{ _("AI snapshot (skeleton edge serverda chiziladi). JSON bo'lsa qo'shimcha overlay.") }}
     </div>
     <div class="d-flex gap-2">
         <span class="status-pill online" data-ai-status>AI</span>
@@ -16,8 +16,9 @@
     </div>
 </div>
 
-<div class="ai-preview-shell" id="ai-preview-root">
-    <canvas id="ai-preview-canvas"></canvas>
+<div class="ai-preview-shell position-relative" id="ai-preview-root">
+    <img data-ai-img class="w-100 d-block" alt="{{ object.name }}">
+    <canvas class="ai-preview-overlay position-absolute top-0 start-0 w-100 h-100" style="display:none; pointer-events:none;"></canvas>
     <div class="ai-preview-loading">
         <div class="spinner-border spinner-border-sm"></div>
         <span class="ms-2">{{ _("Yuklanmoqda...") }}</span>
@@ -33,7 +34,8 @@ document.addEventListener("DOMContentLoaded", function () {
     initAiPreview(root, {
         imageUrl: "{{ preview_url }}",
         dataUrl: "{{ preview_url }}",
-        interval: 1000,
+        interval: 1500,
+        useAi: {{ 'true' if object.use_ai else 'false' }},
     });
     root.querySelector(".ai-preview-loading")?.remove();
 });

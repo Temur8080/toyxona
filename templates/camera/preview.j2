@@ -11,7 +11,7 @@
 
 {% block extra_js %}
 <script type="module" src="{{ static('vendor/go2rts/video-stream.min.js') }}?{{ STATIC_VERSION }}"></script>
-<script data-stream-host="{{ stream_host|default('', true) }}" src="{{ static('js/camera-stream.min.js') }}?{{ STATIC_VERSION }}"></script>
+<script data-stream-host="{{ stream_host|default('', true) }}" src="{{ static('js/camera-stream.js') }}?{{ STATIC_VERSION }}"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const shell = document.querySelector(".video-shell");

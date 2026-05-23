@@ -197,13 +197,18 @@ class CameraAiPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
 
     def render_to_response(self, context, **response_kwargs):
         camera = self.object
+        preview_timeout = min(20, settings.EDGE_API_TIMEOUT)
+
         if self.request.GET.get("image", "").lower() == "true":
+            sn = camera.device_sn
             for path in (
-                f"/api/ai/snapshot/{camera.device_sn}",
-                f"/api/snapshot/{camera.device_sn}",
+                f"/api/ai/snapshot/{sn}",
+                f"/api/ai/snapshot/{sn}?overlay=1",
+                f"/api/ai/snapshot/{sn}?draw=1",
+                f"/api/snapshot/{sn}",
             ):
                 try:
-                    resp = self._edge_get(camera, path, timeout=settings.EDGE_API_TIMEOUT)
+                    resp = self._edge_get(camera, path, timeout=preview_timeout)
                     if resp and resp.status_code == 200 and len(resp.content) > 500:
                         return HttpResponse(
                             resp.content,
@@ -214,13 +219,16 @@ class CameraAiPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             return HttpResponse(status=404)
 
         if self.request.GET.get("data", "").lower() == "true":
+            sn = camera.device_sn
             for path in (
-                f"/api/ai/poses/{camera.device_sn}",
-                f"/api/ai/skeleton/{camera.device_sn}",
-                f"/api/ai/keypoints/{camera.device_sn}",
+                f"/api/ai/poses/{sn}",
+                f"/api/ai/skeleton/{sn}",
+                f"/api/ai/keypoints/{sn}",
+                f"/api/ai/pose/{sn}",
+                f"/api/ai/detections/{sn}",
             ):
                 try:
-                    resp = self._edge_get(camera, path, timeout=settings.EDGE_API_TIMEOUT)
+                    resp = self._edge_get(camera, path, timeout=preview_timeout)
                     if resp and resp.status_code == 200:
                         return HttpResponse(
                             resp.content,

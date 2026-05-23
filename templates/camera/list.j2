@@ -89,22 +89,57 @@
         if (confirm("{{ _('Yangilansinmi?') }}")) window.location.href = "?u=true";
     });
 
-    function refreshAiThumbnails() {
-        document.querySelectorAll("img[data-ai-live]").forEach(img => {
+    const aiQueue = [];
+    let aiActive = 0;
+    const AI_MAX_PARALLEL = 3;
+    const AI_INTERVAL_MS = 12000;
+
+    function pumpAiQueue() {
+        while (aiActive < AI_MAX_PARALLEL && aiQueue.length) {
+            const img = aiQueue.shift();
             const base = img.getAttribute("data-ai-src");
-            if (!base) return;
-            fetch(`${base}&${Date.now()}`)
+            if (!base) continue;
+            aiActive++;
+            fetch(`${base}&_=${Date.now()}`, {cache: "no-store"})
                 .then(r => r.ok ? r.blob() : Promise.reject())
                 .then(blob => {
+                    const old = img.dataset.blobUrl;
                     img.src = URL.createObjectURL(blob);
+                    if (old) URL.revokeObjectURL(old);
+                    img.dataset.blobUrl = img.src;
                 })
-                .catch(() => {});
+                .catch(() => {})
+                .finally(() => {
+                    aiActive--;
+                    pumpAiQueue();
+                });
+        }
+    }
+
+    function queueVisibleAiThumbnails() {
+        aiQueue.length = 0;
+        document.querySelectorAll("img[data-ai-live]").forEach(img => {
+            if (img.dataset.aiVisible === "1") aiQueue.push(img);
         });
+        pumpAiQueue();
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        refreshAiThumbnails();
-        setInterval(refreshAiThumbnails, 5000);
+        const imgs = document.querySelectorAll("img[data-ai-live]");
+        if (!imgs.length || !("IntersectionObserver" in window)) {
+            imgs.forEach(img => { img.dataset.aiVisible = "1"; });
+            queueVisibleAiThumbnails();
+            setInterval(queueVisibleAiThumbnails, AI_INTERVAL_MS);
+            return;
+        }
+        const obs = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                e.target.dataset.aiVisible = e.isIntersecting ? "1" : "0";
+            });
+            queueVisibleAiThumbnails();
+        }, {rootMargin: "80px", threshold: 0.05});
+        imgs.forEach(img => obs.observe(img));
+        setInterval(queueVisibleAiThumbnails, AI_INTERVAL_MS);
     });
 </script>
 {% if updating %}

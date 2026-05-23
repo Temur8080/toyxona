@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, HttpResponseForbidden
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views import View
@@ -156,7 +156,22 @@ class CameraPreview(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
         context["PAGE_TITLE"] = str(self.object.hall)
         context["PAGE_SUBTITLE"] = self.object.name
         context["stream_host"] = os.getenv("CAMERA_STREAM_HOST")
+        context["live_frame_url"] = reverse("camera-live-frame", args=[self.object.pk])
         return context
+
+
+class CameraLiveFrameView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Live fallback — edge dan bitta JPEG kadr (til prefiksisiz URL)."""
+    permission_required = "camera.view_camera"
+
+    def get(self, request, pk, *args, **kwargs):
+        camera = get_object_or_404(Camera.objects.filter(is_active=True), pk=pk)
+        content, ctype = fetch_snapshot_bytes(camera, timeout=20)
+        if content:
+            resp = HttpResponse(content, content_type=ctype)
+            resp["Cache-Control"] = "no-store"
+            return resp
+        return HttpResponse(status=502)
 
 
 class CameraVerifyView(View):
@@ -300,9 +315,13 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         return super().get(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
         self.object = self.get_object()
         try:
             data = json.loads(request.body)
+            if not isinstance(data, list):
+                raise ValueError(_("JSON ro'yxat bo'lishi kerak"))
             serializer = CameraRoiSerializer(data=data, many=True)
             serializer.is_valid(raise_exception=True)
             self.object.roi = serializer.validated_data
@@ -312,9 +331,27 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
             return HttpResponse(json.dumps({
                 "ok": True,
                 "message": _("ROI saqlandi"),
-            }))
+            }), content_type="application/json")
+        except DRFValidationError as exc:
+            return HttpResponse(
+                json.dumps({"ok": False, "errors": exc.detail}),
+                status=400,
+                content_type="application/json",
+            )
+        except json.JSONDecodeError:
+            return HttpResponse(
+                json.dumps({"ok": False, "error": _("JSON noto'g'ri")}),
+                status=400,
+                content_type="application/json",
+            )
         except Exception as exc:
-            return HttpResponse(json.dumps({"error": str(exc)}), status=400)
+            if settings.DEBUG:
+                raise
+            return HttpResponse(
+                json.dumps({"ok": False, "error": str(exc)}),
+                status=400,
+                content_type="application/json",
+            )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

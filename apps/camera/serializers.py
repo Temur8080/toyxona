@@ -1,10 +1,23 @@
 import re
+import uuid
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from apps.camera.models import Camera
+
+ZONE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,29}$")
+
+
+def normalize_zone_value(raw):
+    """Zona nomini edge uchun: faqat kichik harf, raqam, _, -"""
+    value = (raw or "").strip().lower()
+    value = re.sub(r"[^a-z0-9_-]+", "_", value)
+    value = re.sub(r"_+", "_", value).strip("_-")
+    if value and ZONE_PATTERN.match(value):
+        return value
+    return f"zona_{uuid.uuid4().hex[:8]}"
 
 
 class CameraRoiPointSerializer(serializers.Serializer):
@@ -13,18 +26,26 @@ class CameraRoiPointSerializer(serializers.Serializer):
 
 
 class CameraRoiSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
+    id = serializers.CharField(max_length=36)
     type = serializers.IntegerField(required=False, default=Camera.TYPE_ZONE)
-    value = serializers.CharField(min_length=1, required=True)
+    value = serializers.CharField(required=False, allow_blank=True, default="")
     points = CameraRoiPointSerializer(many=True)
 
-    ZONE_PATTERN = r"^[a-z0-9_-]+$"
+    def validate_id(self, value):
+        value = str(value).strip()
+        try:
+            uuid.UUID(value)
+        except ValueError as exc:
+            raise ValidationError(_("Noto'g'ri zona ID")) from exc
+        return value
 
     def validate(self, attrs):
-        if not re.match(self.ZONE_PATTERN, attrs.get("value", "")):
-            raise ValidationError({"value": _("Zona nomi noto'g'ri (masalan: zal, kirish)")})
-        if len(attrs.get("points", [])) != 4:
-            raise ValidationError({"points": _("Zona 4 ta nuqtadan iborat bo'lishi kerak")})
+        attrs["value"] = normalize_zone_value(attrs.get("value"))
+        points = attrs.get("points") or []
+        if len(points) < 3:
+            raise ValidationError({"points": _("Zona kamida 3 ta nuqtadan iborat bo'lishi kerak")})
+        if len(points) > 12:
+            raise ValidationError({"points": _("Juda ko'p nuqta (max 12)")})
         return attrs
 
 

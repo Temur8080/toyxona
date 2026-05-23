@@ -16,11 +16,20 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
     raise ImproperlyConfigured("SECRET_KEY is not set. Add it to .env")
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get('ALLOWED_HOSTS', '127.0.0.1').replace(',', ' ').split()
-    if host.strip()
-]
+def _parse_allowed_hosts():
+    """Host:port (masalan 176.101.56.247:8000) ham qabul qilinadi."""
+    hosts = []
+    for host in os.environ.get('ALLOWED_HOSTS', '127.0.0.1').replace(',', ' ').split():
+        host = host.strip()
+        if not host:
+            continue
+        hosts.append(host)
+        if ':' not in host:
+            hosts.extend((f'{host}:80', f'{host}:8000'))
+    return list(dict.fromkeys(hosts))
+
+
+ALLOWED_HOSTS = _parse_allowed_hosts()
 
 INSTALLED_APPS = [
     'django.contrib.admin',

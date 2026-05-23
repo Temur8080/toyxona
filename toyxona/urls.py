@@ -7,9 +7,14 @@ from django.utils.translation import gettext_lazy as _
 from django.views.i18n import JavaScriptCatalog
 from django_otp.admin import OTPAdminSite
 
+from apps.camera.views import CameraLiveFrameView, CameraVerifyView
+
 urlpatterns = [
     path('control/', admin.site.urls),
     path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+    # nginx auth_request va live snapshot — til prefiksisiz
+    path('camera/verify/', CameraVerifyView.as_view(), name='camera-verify'),
+    path('camera/live-frame/<int:pk>/', CameraLiveFrameView.as_view(), name='camera-live-frame'),
 ]
 
 if settings.DEBUG:

@@ -1,3 +1,24 @@
+let zoneCounter = 0;
+
+function defaultZoneName() {
+    zoneCounter += 1;
+    return `zona${zoneCounter}`;
+}
+
+function formatRoiErrors(data) {
+    if (!data) return gettext("Saqlashda xato");
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    if (data.errors) {
+        try {
+            return JSON.stringify(data.errors, null, 2);
+        } catch (e) {
+            return String(data.errors);
+        }
+    }
+    return gettext("Saqlashda xato");
+}
+
 function newRoiId() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
         return crypto.randomUUID();
@@ -199,6 +220,7 @@ function poly_add(id, type, label, value = "", points = null, pos = null, select
     poly.on("mousedblclick", () => { poly._toggle_editing(); canvas.requestRenderAll(); });
     canvas.add(poly);
     if (select) canvas.setActiveObject(poly);
+    return poly;
 }
 
 function delete_object(e, transform) {
@@ -259,18 +281,35 @@ document.querySelectorAll("#id_buttons button").forEach(btn => {
             alert(gettext("Kamera rasmi hali yuklanmadi. «Rasmni edge dan yuklash» yoki biroz kuting."));
             return;
         }
-        poly_add(undefined, parseInt(btn.dataset.type, 10), btn.dataset.label);
+        const poly = poly_add(undefined, parseInt(btn.dataset.type, 10), btn.dataset.label, defaultZoneName());
+        if (poly && assign_modal) {
+            canvas.setActiveObject(poly);
+            assign_modal.show();
+        }
     });
 });
 
 document.querySelector("#id_btn_save")?.addEventListener("click", () => {
+    const payload = load_poly_data();
+    for (const row of payload) {
+        if (!row.points || row.points.length < 3) {
+            alert(gettext("Har bir zona kamida 3 ta nuqtadan iborat bo'lishi kerak"));
+            return;
+        }
+    }
     fetch("", {
         method: "POST",
         headers: {"Content-Type": "application/json", ...csrf_header()},
-        body: JSON.stringify(load_poly_data()),
+        body: JSON.stringify(payload),
     })
-        .then(r => r.json())
-        .then(data => alert(data.message || data.error || gettext("Saqlandi")))
+        .then(async r => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) {
+                alert(formatRoiErrors(data));
+                return;
+            }
+            alert(data.message || gettext("Saqlandi"));
+        })
         .catch(() => alert(gettext("Saqlashda xato")));
 });
 

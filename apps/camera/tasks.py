@@ -32,13 +32,24 @@ def calc_countdown():
 
 
 def run_update_camera_info(camera_id):
-    res = update_camera_info.apply_async(kwargs={'camera_id': camera_id})
-    key = CAMERA_INFO_KEY.format(camera_id)
-    old_task_id = redis_getset(key, res.id)
-    if old_task_id and old_task_id.decode() != res.id:
-        app.control.revoke(old_task_id.decode(), terminate=True)
-    redis_expire(key, 7 * 24 * 3600)
-    return res
+    """Edge ga ROI yuborish — Celery bo'lmasa sinxron fallback."""
+    try:
+        res = update_camera_info.apply_async(kwargs={'camera_id': camera_id})
+        key = CAMERA_INFO_KEY.format(camera_id)
+        old_task_id = redis_getset(key, res.id)
+        if old_task_id and old_task_id.decode() != res.id:
+            app.control.revoke(old_task_id.decode(), terminate=True)
+        redis_expire(key, 7 * 24 * 3600)
+        return res
+    except Exception as exc:
+        print(f"run_update_camera_info async failed: {exc}")
+        try:
+            camera = Camera.objects.get(pk=camera_id)
+            sync_camera_info(camera, timeout=15)
+            return True
+        except Exception as sync_exc:
+            print(f"sync_camera_info fallback failed: {sync_exc}")
+        return None
 
 
 def sync_camera_info(camera, timeout=10):

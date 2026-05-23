@@ -241,9 +241,9 @@ function load_poly_data() {
             y: parseInt(1e5 * p.y / CANVAS_SIZE.h),
         }));
         out.push({
-            id: poly._id,
-            type: poly._type,
-            value: String(poly._value).trim(),
+            id: String(poly._id || newRoiId()),
+            type: parseInt(poly._type, 10) || 0,
+            value: String(poly._value ?? "").trim(),
             points: pts,
         });
     });
@@ -297,7 +297,7 @@ document.querySelector("#id_btn_save")?.addEventListener("click", () => {
             return;
         }
     }
-    fetch("", {
+    fetch(window.location.pathname, {
         method: "POST",
         headers: {"Content-Type": "application/json", ...csrf_header()},
         body: JSON.stringify(payload),
@@ -308,7 +308,11 @@ document.querySelector("#id_btn_save")?.addEventListener("click", () => {
                 alert(formatRoiErrors(data));
                 return;
             }
-            alert(data.message || gettext("Saqlandi"));
+            let msg = data.message || gettext("Saqlandi");
+            if (data.edge_synced === false) {
+                msg += "\n" + gettext("Edge serverga sinxronlash keyinroq uriniladi.");
+            }
+            alert(msg);
         })
         .catch(() => alert(gettext("Saqlashda xato")));
 });

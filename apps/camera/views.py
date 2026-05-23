@@ -327,10 +327,11 @@ class CameraRoiEditView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
             self.object.roi = serializer.validated_data
             self.object.save(update_fields=["roi"])
             from apps.camera.tasks import run_update_camera_info
-            run_update_camera_info(self.object.id)
+            edge_synced = run_update_camera_info(self.object.id) is not None
             return HttpResponse(json.dumps({
                 "ok": True,
-                "message": _("ROI saqlandi"),
+                "message": str(_("ROI saqlandi")),
+                "edge_synced": edge_synced,
             }), content_type="application/json")
         except DRFValidationError as exc:
             return HttpResponse(

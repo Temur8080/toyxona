@@ -32,12 +32,17 @@ class CameraRoiSerializer(serializers.Serializer):
     points = CameraRoiPointSerializer(many=True)
 
     def validate_id(self, value):
-        value = str(value).strip()
+        value = str(value).strip() if value is not None else ""
+        if not value:
+            return str(uuid.uuid4())
         try:
             uuid.UUID(value)
-        except ValueError as exc:
-            raise ValidationError(_("Noto'g'ri zona ID")) from exc
-        return value
+            return value
+        except ValueError:
+            slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", value).strip("_-").lower()
+            if slug and len(slug) <= 36:
+                return slug
+            return str(uuid.uuid4())
 
     def validate(self, attrs):
         attrs["value"] = normalize_zone_value(attrs.get("value"))

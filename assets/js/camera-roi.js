@@ -1,3 +1,14 @@
+function newRoiId() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
 const CANVAS_SIZE = {w: 1024, h: 576};
 const JSON_ROI_SIZE = {w: 640, h: 360};
 const CENTER = {x: CANVAS_SIZE.w / 2, y: CANVAS_SIZE.h / 2};
@@ -140,7 +151,7 @@ function poly_add(id, type, label, value = "", points = null, pos = null, select
         transparentCorners: false,
         cornerColor: "blue",
     });
-    poly._id = id || crypto.randomUUID();
+    poly._id = id || newRoiId();
     poly._editing = true;
     poly._type = type;
     poly._label = label;
